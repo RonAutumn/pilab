@@ -1,0 +1,106 @@
+# CinePi Timelapse System Configuration Example
+# Copy this file to config.yaml and modify as needed
+
+# Camera settings
+camera:
+  # Image resolution [width, height]
+  # Full resolution: [4056, 3040]
+  # Half resolution: [2028, 1520]
+  # Quarter resolution: [1014, 760]
+  resolution: [4056, 3040]
+  
+  # JPEG quality (1-100, higher = better quality but larger files)
+  quality: 95
+  
+  # ISO sensitivity (100, 200, 400, 800, 1600, 3200)
+  # Lower values = less noise but darker images
+  iso: 100
+  
+  # Shutter speed in microseconds (0 = auto)
+  # Examples: 0 (auto), 1000000 (1 second), 500000 (0.5 seconds)
+  shutter_speed: 0
+  
+  # Exposure mode
+  # Options: auto, night, backlight, spotlight, sports, snow, beach, verylong, fixedfps, antishake, fireworks
+  exposure_mode: "auto"
+  
+  # Auto white balance mode
+  # Options: auto, sunlight, cloudy, shade, tungsten, fluorescent, incandescent, flash, horizon
+  awb_mode: "auto"
+
+# Timelapse settings
+timelapse:
+  # Capture interval in seconds
+  # Recommended: 30-300 seconds for most timelapses
+  interval_seconds: 30
+  
+  # Total duration in hours (0 = run indefinitely)
+  # Examples: 24 (1 day), 168 (1 week), 0 (indefinite)
+  duration_hours: 24
+  
+  # Output directory for captured images
+  output_dir: "output/images"
+  
+  # Filename prefix for captured images
+  filename_prefix: "timelapse"
+  
+  # Image format (jpg, png, bmp)
+  # jpg is recommended for best performance
+  image_format: "jpg"
+  
+  # Add timestamp to filename
+  add_timestamp: true
+  
+  # Create daily subdirectories (YYYY-MM-DD)
+  create_daily_dirs: true
+
+# Logging settings
+logging:
+  # Log level (DEBUG, INFO, WARNING, ERROR)
+  # DEBUG: Detailed information for troubleshooting
+  # INFO: General information about system operation
+  # WARNING: Only warnings and errors
+  # ERROR: Only errors
+  log_level: "INFO"
+  
+  # Directory for log files
+  log_dir: "logs"
+  
+  # CSV filename for metadata logging
+  csv_filename: "timelapse_metadata.csv"
+
+# Advanced settings (optional)
+# Uncomment and modify as needed
+
+# # Performance optimization for long captures
+# camera:
+#   resolution: [2028, 1520]  # Lower resolution
+#   quality: 85               # Lower quality
+#   exposure_mode: "auto"     # Auto exposure
+# 
+# timelapse:
+#   interval_seconds: 60      # Longer intervals
+
+# # High-quality settings for short captures
+# camera:
+#   resolution: [4056, 3040]  # Full resolution
+#   quality: 95               # High quality
+#   iso: 100                  # Low ISO
+#   exposure_mode: "auto"     # Auto exposure
+# 
+# timelapse:
+#   interval_seconds: 30      # Shorter intervals
+
+# # Night photography settings
+# camera:
+#   exposure_mode: "night"
+#   awb_mode: "tungsten"
+#   iso: 400
+#   shutter_speed: 2000000  # 2 seconds
+
+# # Daytime outdoor settings
+# camera:
+#   exposure_mode: "auto"
+#   awb_mode: "sunlight"
+#   iso: 100
+#   shutter_speed: 0  # Auto 
