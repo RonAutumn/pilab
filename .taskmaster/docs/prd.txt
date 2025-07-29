@@ -1,0 +1,135 @@
+# Overview
+CinePi is a reliable, one-command imaging system built on Raspberry Pi 5 with HQ Camera and 16mm lens for automated time-lapse photography of Petri plates. The system captures images at configurable intervals, evaluates basic image quality metrics, and logs comprehensive metadata for future machine learning applications. Tier 1 focuses on creating a stable, extensible foundation that can run continuously for 24+ hours without intervention.
+
+The primary problem solved is the need for consistent, high-quality time-lapse documentation of biological experiments without manual intervention, while maintaining data integrity and providing extensible code for future enhancements.
+
+# Core Features
+## 1. Automated Capture Loop
+- **Purpose**: Continuous image capture at specified intervals
+- **Importance**: Forms the backbone of the time-lapse system
+- **Implementation**: Python main.py with CLI argument support for interval configuration
+- **Acceptance**: Runs 24+ hours without crashes, creates images and CSV logs consistently
+
+## 2. Image Quality Metrics
+- **Purpose**: Ensure captured images meet quality standards
+- **Importance**: Prevents storage of unusable images and provides data for ML training
+- **Implementation**: metrics.py module with Laplacian variance for sharpness and mean brightness calculation
+- **Acceptance**: Sharpness values logged, brightness warnings for <30 or >220 values
+
+## 3. Metadata Logging
+- **Purpose**: Comprehensive tracking of capture parameters and quality metrics
+- **Importance**: Enables data analysis and ML model training
+- **Implementation**: CSV logging with timestamp, filename, sharpness, brightness per frame
+- **Acceptance**: Each image has corresponding CSV row with all required metadata
+
+## 4. Configuration Management
+- **Purpose**: Allow parameter adjustment without code changes
+- **Importance**: Enables rapid experimentation and deployment flexibility
+- **Implementation**: YAML config file for resolution, ISO, exposure settings
+- **Acceptance**: All camera parameters configurable via config.yaml
+
+## 5. Graceful System Management
+- **Purpose**: Safe startup/shutdown without data corruption
+- **Importance**: Prevents data loss during extended runs
+- **Implementation**: Exception handling for Ctrl-C and error conditions
+- **Acceptance**: Clean shutdown preserves CSV integrity and closes camera properly
+
+## 6. Organized File Structure
+- **Purpose**: Maintain clean project organization
+- **Importance**: Facilitates debugging and future extension
+- **Implementation**: Images in output/images/, logs in logs/, auto-creation of directories
+- **Acceptance**: All directories created automatically, clear separation of concerns
+
+# User Experience
+## Target Users
+- Biology researchers conducting time-lapse experiments
+- Lab technicians needing automated documentation
+- ML engineers requiring consistent image datasets
+
+## Key User Flows
+1. **Initial Setup**: User clones repo, edits config.yaml for camera settings, runs main.py with desired interval
+2. **Daily Operation**: System runs autonomously, user checks logs for quality metrics
+3. **Data Review**: User accesses CSV logs and image folders for analysis
+
+## UI/UX Considerations
+- Command-line interface for simplicity and automation
+- Clear console output for status monitoring
+- Comprehensive logging for troubleshooting
+- Minimal configuration required for basic operation
+
+# Technical Architecture
+## System Components
+- **main.py**: Entry point and main capture loop
+- **capture_utils.py**: Camera initialization and image capture
+- **metrics.py**: Image quality assessment functions
+- **config.yaml**: Runtime configuration parameters
+
+## Data Models
+- **Image Metadata**: timestamp, filename, sharpness_score, brightness_value
+- **Configuration**: resolution, iso, exposure_time, capture_interval
+
+## APIs and Integrations
+- **Picamera2**: Primary camera interface for Raspberry Pi
+- **OpenCV**: Image processing for quality metrics
+- **YAML**: Configuration file parsing
+- **CSV**: Metadata logging format
+
+## Infrastructure Requirements
+- Raspberry Pi 5 with sufficient storage
+- Raspberry Pi HQ Camera with 16mm lens
+- Python 3.9+ environment
+- Required packages: picamera2, opencv-python, pyyaml
+
+# Development Roadmap
+## Phase 1: MVP (Tier 1)
+- Basic capture loop with interval control
+- Image quality metrics (sharpness, brightness)
+- CSV metadata logging
+- YAML configuration system
+- Graceful error handling
+- Organized file structure
+
+## Phase 2: Enhanced Stability (Future)
+- Camera re-initialization after N frames
+- SD card wear leveling
+- Power monitoring integration
+- Remote status monitoring
+
+## Phase 3: Advanced Features (Future)
+- QR code detection for sample identification
+- Automated focus adjustment
+- Multi-camera support
+- Cloud synchronization
+
+# Logical Dependency Chain
+1. **Folder Structure Setup** - Establish project layout and basic files
+2. **Configuration System** - Create YAML config and parsing utilities
+3. **Camera Utilities** - Implement camera initialization and capture functions
+4. **Metrics Module** - Build image quality assessment functions
+5. **Main Capture Loop** - Integrate all components into working system
+6. **Testing & Validation** - Verify 24+ hour continuous operation
+
+# Risks and Mitigations
+## Technical Challenges
+- **Camera hangs after extended use**: Implement periodic camera re-initialization
+- **SD card wear from frequent writes**: Use tmpfs for temporary storage with daily sync
+- **Lighting drift affecting quality**: Log brightness metrics for later correction
+- **Python environment issues**: Provide requirements.txt and setup instructions
+
+## Resource Constraints
+- **Limited Pi processing power**: Optimize image processing algorithms
+- **Storage limitations**: Implement basic file management (future enhancement)
+- **Power reliability**: Document power requirements and UPS recommendations
+
+# Appendix
+## Success Metrics
+- Runtime stability: ≥48 hours continuous operation
+- Capture accuracy: ±2 seconds of requested interval
+- Quality coverage: ≥95% frames within brightness range 30-220
+- Code health: Pylint score ≥8.0 on all modules
+
+## Development Standards
+- Clean, documented Python code
+- Comprehensive error handling
+- Unit tests for core functions
+- Clear README with setup instructions
