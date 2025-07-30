@@ -1,0 +1,582 @@
+/* CinePi Dashboard - Orientation Optimization Styles */
+
+/* Raspberry Pi 5 Touchscreen Optimizations */
+/* Common Pi 5 resolutions: 800x480, 1024x768, 1280x720 */
+
+/* Portrait Mode Optimizations */
+@media (orientation: portrait) {
+    /* Pi 5 Portrait (480x800, 768x1024) */
+    .container {
+        padding: var(--spacing-sm);
+        max-width: 100%;
+    }
+    
+    .header {
+        padding: var(--spacing-md);
+        margin-bottom: var(--spacing-md);
+    }
+    
+    .header h1 {
+        font-size: 1.5rem;
+        line-height: 1.2;
+    }
+    
+    .header p {
+        font-size: 0.875rem;
+    }
+    
+    /* Single column layout for portrait */
+    .status-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
+    }
+    
+    .control-panel,
+    .settings-panel,
+    .stream-container {
+        padding: var(--spacing-md);
+        margin-bottom: var(--spacing-md);
+    }
+    
+    /* Optimize button sizes for portrait */
+    .button {
+        min-height: 56px;
+        min-width: 56px;
+        font-size: 1rem;
+        padding: var(--spacing-md) var(--spacing-lg);
+    }
+    
+    .button.large {
+        min-height: 64px;
+        min-width: 64px;
+        font-size: 1.125rem;
+        padding: var(--spacing-lg) var(--spacing-xl);
+    }
+    
+    /* Stack form elements vertically */
+    .form-row {
+        flex-direction: column;
+        gap: var(--spacing-md);
+    }
+    
+    .form-control {
+        min-height: 56px;
+        font-size: 1rem;
+        padding: var(--spacing-md);
+    }
+    
+    /* Optimize sliders for portrait */
+    .slider {
+        height: 16px;
+    }
+    
+    .slider::-webkit-slider-thumb {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .slider::-moz-range-thumb {
+        width: 36px;
+        height: 36px;
+    }
+    
+    /* Compact status indicators */
+    .status-indicators {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-sm);
+        padding: var(--spacing-sm);
+    }
+    
+    .status-indicator-item {
+        padding: var(--spacing-sm);
+        min-height: 48px;
+    }
+    
+    /* Optimize stream container for portrait */
+    .stream-placeholder {
+        min-height: 150px;
+        padding: var(--spacing-md);
+    }
+    
+    /* Compact navigation for portrait */
+    .quick-actions {
+        padding: var(--spacing-sm);
+        gap: var(--spacing-xs);
+    }
+    
+    .quick-action {
+        min-height: 56px;
+        font-size: 0.75rem;
+    }
+    
+    .quick-action-icon {
+        font-size: 1rem;
+    }
+    
+    /* Mobile nav adjustments for portrait */
+    .mobile-nav {
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    .nav-item {
+        min-height: 56px;
+        padding: var(--spacing-md);
+    }
+    
+    .hamburger-menu {
+        top: var(--spacing-sm);
+        right: var(--spacing-sm);
+    }
+}
+
+/* Landscape Mode Optimizations */
+@media (orientation: landscape) {
+    /* Pi 5 Landscape (800x480, 1024x768, 1280x720) */
+    .container {
+        padding: var(--spacing-md);
+        max-width: 100%;
+    }
+    
+    .header {
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+    }
+    
+    .header h1 {
+        font-size: 1.75rem;
+    }
+    
+    /* Multi-column layout for landscape */
+    .status-grid {
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: var(--spacing-lg);
+    }
+    
+    .control-panel,
+    .settings-panel,
+    .stream-container {
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+    }
+    
+    /* Optimize button layout for landscape */
+    .button-group {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: var(--spacing-md);
+    }
+    
+    .button {
+        min-height: 48px;
+        min-width: 48px;
+        flex: 1;
+        min-width: 120px;
+    }
+    
+    .button.large {
+        min-height: 56px;
+        min-width: 56px;
+        flex: 1;
+        min-width: 150px;
+    }
+    
+    /* Side-by-side form elements */
+    .form-row {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: var(--spacing-lg);
+    }
+    
+    .form-row > * {
+        flex: 1;
+        min-width: 200px;
+    }
+    
+    /* Optimize sliders for landscape */
+    .slider {
+        height: 12px;
+    }
+    
+    .slider::-webkit-slider-thumb {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .slider::-moz-range-thumb {
+        width: 28px;
+        height: 28px;
+    }
+    
+    /* Multi-column status indicators */
+    .status-indicators {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--spacing-md);
+        padding: var(--spacing-md);
+    }
+    
+    /* Optimize stream container for landscape */
+    .stream-placeholder {
+        min-height: 200px;
+        padding: var(--spacing-lg);
+    }
+    
+    /* Hide quick actions in landscape */
+    .quick-actions {
+        display: none;
+    }
+    
+    /* Adjust container padding for landscape */
+    .container {
+        padding-bottom: var(--spacing-lg);
+    }
+}
+
+/* Specific Raspberry Pi 5 Resolution Optimizations */
+
+/* Pi 5 800x480 (Common Official Touchscreen) */
+@media (width: 800px) and (height: 480px) {
+    .container {
+        padding: var(--spacing-sm);
+    }
+    
+    .header h1 {
+        font-size: 1.25rem;
+    }
+    
+    .status-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-sm);
+    }
+    
+    .button {
+        min-height: 48px;
+        font-size: 0.875rem;
+        padding: var(--spacing-sm) var(--spacing-md);
+    }
+    
+    .form-control {
+        min-height: 48px;
+        font-size: 0.875rem;
+    }
+    
+    .stream-placeholder {
+        min-height: 120px;
+    }
+    
+    /* Compact layout for small screen */
+    .control-panel,
+    .settings-panel,
+    .stream-container {
+        padding: var(--spacing-sm);
+        margin-bottom: var(--spacing-sm);
+    }
+    
+    .status-indicators {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-xs);
+        padding: var(--spacing-sm);
+    }
+}
+
+/* Pi 5 1024x768 (Common Touchscreen) */
+@media (width: 1024px) and (height: 768px) {
+    .status-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--spacing-md);
+    }
+    
+    .form-row {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+    
+    .form-row > * {
+        flex: 1;
+        min-width: 180px;
+    }
+    
+    .stream-placeholder {
+        min-height: 180px;
+    }
+}
+
+/* Pi 5 1280x720 (HD Touchscreen) */
+@media (width: 1280px) and (height: 720px) {
+    .status-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--spacing-lg);
+    }
+    
+    .form-row > * {
+        min-width: 220px;
+    }
+    
+    .stream-placeholder {
+        min-height: 220px;
+    }
+}
+
+/* Performance Optimizations for Pi 5 */
+
+/* Reduce animations on Pi 5 for better performance */
+@media (max-width: 1024px) {
+    .button::before {
+        animation: none;
+    }
+    
+    .status-card:hover {
+        transform: none;
+    }
+    
+    .capture-item:hover {
+        transform: none;
+    }
+    
+    .hover-card:hover {
+        transform: none;
+    }
+    
+    /* Reduce shadow complexity */
+    .status-card,
+    .control-panel,
+    .settings-panel,
+    .stream-container {
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+    
+    .button:hover {
+        transform: none;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+}
+
+/* Memory and CPU optimizations */
+@media (max-width: 1024px) {
+    /* Reduce gradient complexity */
+    body {
+        background: var(--dark-bg);
+    }
+    
+    .header {
+        background: var(--card-bg);
+    }
+    
+    .button {
+        background: var(--primary-color);
+    }
+    
+    .button.danger {
+        background: var(--danger-color);
+    }
+    
+    .button.success {
+        background: var(--success-color);
+    }
+    
+    .button.warning {
+        background: var(--warning-color);
+    }
+    
+    /* Reduce border radius for performance */
+    .status-card,
+    .control-panel,
+    .settings-panel,
+    .stream-container,
+    .button,
+    .form-control {
+        border-radius: 6px;
+    }
+}
+
+/* Touch Optimization for Pi 5 Touchscreen */
+
+/* Increase touch targets on Pi 5 */
+@media (max-width: 1024px) {
+    .button {
+        min-height: 56px;
+        min-width: 56px;
+    }
+    
+    .form-control {
+        min-height: 56px;
+    }
+    
+    .slider::-webkit-slider-thumb {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .slider::-moz-range-thumb {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .toggle-switch {
+        width: 70px;
+        height: 40px;
+    }
+    
+    .toggle-switch.large {
+        width: 90px;
+        height: 50px;
+    }
+}
+
+/* High DPI Display Optimizations */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .button,
+    .form-control,
+    .slider::-webkit-slider-thumb,
+    .slider::-moz-range-thumb {
+        border-width: 0.5px;
+    }
+    
+    .status-card,
+    .control-panel,
+    .settings-panel,
+    .stream-container {
+        border-width: 0.5px;
+    }
+}
+
+/* Reduced Motion for Performance */
+@media (prefers-reduced-motion: reduce) {
+    .button,
+    .status-card,
+    .capture-item,
+    .hover-card,
+    .mobile-nav,
+    .hamburger-menu {
+        transition: none;
+    }
+    
+    .button::before {
+        animation: none;
+    }
+    
+    .progress-bar::before {
+        animation: none;
+    }
+}
+
+/* Battery Optimization for Pi 5 */
+@media (max-width: 1024px) {
+    /* Reduce background blur for better performance */
+    .mobile-nav {
+        backdrop-filter: none;
+        background: rgba(0, 0, 0, 0.95);
+    }
+    
+    /* Reduce box-shadow complexity */
+    .notification {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+    
+    /* Optimize animations */
+    .fade-in,
+    .slide-in {
+        animation: none;
+    }
+}
+
+/* Critical Controls Always Accessible */
+@media (max-width: 1024px) {
+    /* Ensure critical controls are always visible */
+    .control-panel {
+        order: 1;
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: var(--card-bg);
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    /* Keep status indicators visible */
+    .status-grid {
+        order: 2;
+    }
+    
+    /* Settings panel accessible */
+    .settings-panel {
+        order: 3;
+    }
+    
+    /* Stream container */
+    .stream-container {
+        order: 4;
+    }
+}
+
+/* Orientation Change Handling */
+@media (orientation: portrait) and (max-height: 500px) {
+    /* Very short portrait mode */
+    .header {
+        padding: var(--spacing-sm);
+        margin-bottom: var(--spacing-sm);
+    }
+    
+    .header h1 {
+        font-size: 1.25rem;
+    }
+    
+    .status-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--spacing-sm);
+    }
+    
+    .control-panel,
+    .settings-panel {
+        padding: var(--spacing-sm);
+    }
+    
+    .button {
+        min-height: 48px;
+        font-size: 0.875rem;
+    }
+}
+
+@media (orientation: landscape) and (max-height: 400px) {
+    /* Very short landscape mode */
+    .header {
+        padding: var(--spacing-sm);
+        margin-bottom: var(--spacing-sm);
+    }
+    
+    .header h1 {
+        font-size: 1.25rem;
+    }
+    
+    .status-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: var(--spacing-sm);
+    }
+    
+    .control-panel,
+    .settings-panel {
+        padding: var(--spacing-sm);
+    }
+    
+    .stream-container {
+        display: none;
+    }
+}
+
+/* Focus Management for Touch Devices */
+@media (max-width: 1024px) {
+    .button:focus,
+    .form-control:focus,
+    .slider:focus,
+    .toggle-switch input:focus + .toggle-slider {
+        outline: 3px solid var(--primary-color);
+        outline-offset: 2px;
+    }
+    
+    /* Ensure focus is visible on touch devices */
+    .nav-item:focus,
+    .quick-action:focus,
+    .hamburger-menu:focus {
+        outline: 3px solid var(--primary-color);
+        outline-offset: 2px;
+    }
+} 

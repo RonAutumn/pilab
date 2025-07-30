@@ -1,0 +1,1361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CinePi Configuration Editor</title>
+    
+    <!-- Monaco Editor CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
+    
+    <!-- Dashboard Styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-first.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-components.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile-navigation.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/orientation-optimization.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/touch-gestures.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/accessibility.css') }}">
+    
+    <style>
+        .editor-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background: var(--bg-color);
+        }
+        
+        .editor-header {
+            background: var(--card-bg);
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: var(--shadow);
+        }
+        
+        .editor-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--text-color);
+            margin: 0 0 10px 0;
+        }
+        
+        .editor-subtitle {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin: 0;
+        }
+        
+        .editor-toolbar {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .editor-main {
+            flex: 1;
+            display: flex;
+            position: relative;
+        }
+        
+        .editor-sidebar {
+            width: 300px;
+            background: var(--card-bg);
+            border-right: 1px solid var(--border-color);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .editor-content {
+            flex: 1;
+            position: relative;
+        }
+        
+        #monaco-editor {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .sidebar-section {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .sidebar-section:last-child {
+            border-bottom: none;
+        }
+        
+        .sidebar-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-color);
+            margin: 0 0 15px 0;
+        }
+        
+        .validation-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+        }
+        
+        .validation-status.valid {
+            background: var(--success-bg);
+            color: var(--success-color);
+        }
+        
+        .validation-status.invalid {
+            background: var(--error-bg);
+            color: var(--error-color);
+        }
+        
+        .validation-status.loading {
+            background: var(--info-bg);
+            color: var(--info-color);
+        }
+        
+        .validation-icon {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+        }
+        
+        .validation-status.valid .validation-icon {
+            background: var(--success-color);
+        }
+        
+        .validation-status.invalid .validation-icon {
+            background: var(--error-color);
+        }
+        
+        .validation-status.loading .validation-icon {
+            background: var(--info-color);
+            animation: pulse 1.5s infinite;
+        }
+        
+        .error-list {
+            max-height: 200px;
+            overflow-y: auto;
+            background: var(--darker-bg);
+            border-radius: 6px;
+            padding: 10px;
+        }
+        
+        .error-item {
+            font-size: 12px;
+            color: var(--error-color);
+            margin-bottom: 5px;
+            padding: 5px;
+            border-left: 3px solid var(--error-color);
+            background: rgba(220, 53, 69, 0.1);
+        }
+        
+        .backup-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .backup-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            margin-bottom: 5px;
+            background: var(--darker-bg);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .backup-item:hover {
+            background: var(--hover-bg);
+        }
+        
+        .backup-info {
+            flex: 1;
+        }
+        
+        .backup-name {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-color);
+        }
+        
+        .backup-date {
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+        
+        .backup-actions {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .backup-controls {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+        
+        .btn-small {
+            padding: 4px 8px;
+            font-size: 10px;
+            border-radius: 4px;
+        }
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        
+        .modal-content {
+            background-color: var(--card-bg);
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+            color: var(--text-color);
+        }
+        
+        .close {
+            color: var(--text-muted);
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+        }
+        
+        .close:hover {
+            color: var(--text-color);
+        }
+        
+        .modal-body {
+            padding: 20px;
+        }
+        
+        .comparison-controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 15px;
+            align-items: end;
+            margin-bottom: 20px;
+        }
+        
+        .comparison-results {
+            margin-top: 20px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 20px;
+        }
+        
+        .comparison-header {
+            margin-bottom: 15px;
+        }
+        
+        .comparison-header h4 {
+            margin: 0 0 10px 0;
+            color: var(--text-color);
+        }
+        
+        .comparison-no-diff {
+            padding: 15px;
+            background: var(--success-bg);
+            color: var(--success-color);
+            border-radius: 5px;
+            text-align: center;
+        }
+        
+        .comparison-differences {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .diff-item {
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 4px solid;
+        }
+        
+        .diff-added {
+            background: var(--success-bg);
+            border-left-color: var(--success-color);
+        }
+        
+        .diff-removed {
+            background: var(--error-bg);
+            border-left-color: var(--error-color);
+        }
+        
+        .diff-changed {
+            background: var(--warning-bg);
+            border-left-color: var(--warning-color);
+        }
+        
+        .diff-type {
+            font-weight: bold;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        
+        .diff-path {
+            font-family: monospace;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        
+        .diff-value {
+            font-size: 13px;
+            opacity: 0.9;
+        }
+        
+        .button.danger {
+            background: var(--error-color);
+            color: white;
+        }
+        
+        .button.danger:hover {
+            background: var(--error-hover);
+        }
+        
+        .status-bar {
+            background: var(--card-bg);
+            padding: 10px 20px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        
+        .status-left {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        /* Mobile-First Responsive Design */
+        @media (max-width: 768px) {
+            .editor-container {
+                height: 100vh;
+                overflow: hidden;
+            }
+            
+            .editor-header {
+                padding: var(--spacing-md);
+                flex-shrink: 0;
+            }
+            
+            .editor-title {
+                font-size: 1.5rem;
+            }
+            
+            .editor-subtitle {
+                font-size: 0.875rem;
+            }
+            
+            .editor-main {
+                flex-direction: column;
+                flex: 1;
+                overflow: hidden;
+            }
+            
+            .editor-sidebar {
+                width: 100%;
+                height: 200px;
+                border-right: none;
+                border-bottom: 1px solid var(--border-color);
+                flex-shrink: 0;
+                overflow-y: auto;
+            }
+            
+            .editor-content {
+                flex: 1;
+                min-height: 0;
+            }
+            
+            .editor-toolbar {
+                flex-direction: column;
+                gap: var(--spacing-sm);
+            }
+            
+            .editor-toolbar .button {
+                width: 100%;
+                min-height: var(--touch-target);
+                font-size: 1rem;
+            }
+            
+            .sidebar-section {
+                padding: var(--spacing-md);
+            }
+            
+            .sidebar-title {
+                font-size: 1rem;
+            }
+            
+            .validation-status {
+                padding: var(--spacing-sm);
+                font-size: 0.875rem;
+            }
+            
+            .error-list {
+                max-height: 150px;
+                font-size: 0.75rem;
+            }
+            
+            .backup-controls {
+                flex-direction: column;
+                gap: var(--spacing-sm);
+            }
+            
+            .backup-controls .button {
+                width: 100%;
+                min-height: var(--touch-target);
+            }
+            
+            .backup-list {
+                max-height: 150px;
+            }
+            
+            .backup-item {
+                padding: var(--spacing-sm);
+                font-size: 0.875rem;
+            }
+            
+            .status-bar {
+                padding: var(--spacing-sm);
+                font-size: 0.75rem;
+            }
+            
+            .status-left {
+                flex-direction: column;
+                gap: var(--spacing-xs);
+            }
+        }
+        
+        /* Tablet Responsive Design */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .editor-sidebar {
+                width: 250px;
+            }
+            
+            .editor-toolbar {
+                gap: var(--spacing-sm);
+            }
+            
+            .editor-toolbar .button {
+                min-height: var(--touch-target);
+                font-size: 0.875rem;
+            }
+        }
+        
+        /* Touch Device Optimizations */
+        @media (hover: none) and (pointer: coarse) {
+            .editor-toolbar .button,
+            .backup-controls .button {
+                min-height: var(--touch-target);
+                min-width: var(--touch-target);
+            }
+            
+            .sidebar-section {
+                padding: var(--spacing-lg);
+            }
+            
+            .validation-status {
+                padding: var(--spacing-md);
+            }
+        }
+        
+        /* High DPI Display Optimizations */
+        @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+            .validation-icon {
+                border: 1px solid var(--border-color);
+            }
+        }
+        
+        /* Reduced Motion Support */
+        @media (prefers-reduced-motion: reduce) {
+            .validation-status.loading .validation-icon {
+                animation: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="editor-container">
+        <!-- Header -->
+        <div class="editor-header">
+            <h1 class="editor-title">Configuration Editor</h1>
+            <p class="editor-subtitle">Edit CinePi configuration with real-time validation</p>
+            
+            <div class="editor-toolbar">
+                <button class="button success" id="saveBtn" disabled>
+                    <i class="icon-save"></i>
+                    Save Configuration
+                </button>
+                <button class="button" id="loadBtn">
+                    <i class="icon-refresh"></i>
+                    Reload
+                </button>
+                <button class="button" id="backupBtn">
+                    <i class="icon-backup"></i>
+                    Create Backup
+                </button>
+                <button class="button" id="validateBtn">
+                    <i class="icon-check"></i>
+                    Validate
+                </button>
+                <button class="button" id="formatBtn">
+                    <i class="icon-format"></i>
+                    Format
+                </button>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="editor-main">
+            <!-- Sidebar -->
+            <div class="editor-sidebar">
+                <!-- Validation Status -->
+                <div class="sidebar-section">
+                    <h3 class="sidebar-title">Validation Status</h3>
+                    <div class="validation-status loading" id="validationStatus">
+                        <div class="validation-icon"></div>
+                        <span id="validationText">Validating...</span>
+                    </div>
+                    <div class="error-list" id="errorList" style="display: none;"></div>
+                </div>
+                
+                <!-- Backups -->
+                <div class="sidebar-section">
+                    <h3 class="sidebar-title">Backups</h3>
+                    <div class="backup-controls">
+                        <button class="button small" id="refreshBackupsBtn">
+                            <i class="icon-refresh"></i>
+                            Refresh
+                        </button>
+                        <button class="button small" onclick="showBackupComparison()">
+                            <i class="icon-compare"></i>
+                            Compare
+                        </button>
+                    </div>
+                    <div class="backup-list" id="backupList">
+                        <div class="backup-item">
+                            <div class="backup-info">
+                                <div class="backup-name">Loading backups...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Editor -->
+            <div class="editor-content">
+                <div id="monaco-editor"></div>
+            </div>
+        </div>
+        
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div class="status-left">
+                <div class="status-item">
+                    <span>Line:</span>
+                    <span id="lineNumber">1</span>
+                </div>
+                <div class="status-item">
+                    <span>Column:</span>
+                    <span id="columnNumber">1</span>
+                </div>
+                <div class="status-item">
+                    <span>Characters:</span>
+                    <span id="charCount">0</span>
+                </div>
+            </div>
+            <div class="status-item">
+                <span>Last saved:</span>
+                <span id="lastSaved">Never</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Backup Comparison Modal -->
+    <div id="comparisonModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Compare Backups</h3>
+                <span class="close" onclick="closeComparisonModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="comparison-controls">
+                    <div class="form-group">
+                        <label for="backup1Select">First Backup:</label>
+                        <select id="backup1Select" class="form-control">
+                            <option value="">Select backup...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="backup2Select">Second Backup:</label>
+                        <select id="backup2Select" class="form-control">
+                            <option value="">Select backup...</option>
+                        </select>
+                    </div>
+                    <button class="button success" onclick="compareSelectedBackups()">
+                        <i class="icon-compare"></i>
+                        Compare
+                    </button>
+                </div>
+                <div id="comparisonResults" class="comparison-results">
+                    <!-- Comparison results will be shown here -->
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Dashboard Scripts -->
+    <script src="{{ url_for('static', filename='js/utils.js') }}"></script>
+    
+    <script>
+        // Global variables
+        let editor;
+        let validationTimer;
+        let isDirty = false;
+        let lastSaved = null;
+        
+        // Initialize Monaco Editor
+        require.config({ paths: { vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs' }});
+        require(['vs/editor/editor.main'], function() {
+            // Create editor
+            editor = monaco.editor.create(document.getElementById('monaco-editor'), {
+                value: '# Loading configuration...\n',
+                language: 'yaml',
+                theme: 'vs-dark',
+                automaticLayout: true,
+                minimap: { enabled: true },
+                scrollBeyondLastLine: false,
+                fontSize: 14,
+                lineNumbers: 'on',
+                roundedSelection: false,
+                scrollbar: {
+                    vertical: 'visible',
+                    horizontal: 'visible'
+                },
+                wordWrap: 'on',
+                folding: true,
+                showFoldingControls: 'always',
+                renderWhitespace: 'selection',
+                tabSize: 2,
+                insertSpaces: true,
+                detectIndentation: false,
+                // Enhanced validation features
+                glyphMargin: true,
+                lightbulb: { enabled: true },
+                parameterHints: { enabled: true },
+                suggestOnTriggerCharacters: true,
+                acceptSuggestionOnEnter: 'on',
+                quickSuggestions: true,
+                // Error highlighting
+                overviewRulerLanes: 2,
+                overviewRulerBorder: true
+            });
+            
+            // Load initial configuration
+            loadConfiguration();
+            
+            // Set up event listeners
+            setupEventListeners();
+            
+            // Set up editor events
+            setupEditorEvents();
+            
+            // Set up Monaco Editor validation
+            setupMonacoValidation();
+        });
+        
+        function setupEventListeners() {
+            // Save button
+            document.getElementById('saveBtn').addEventListener('click', saveConfiguration);
+            
+            // Load button
+            document.getElementById('loadBtn').addEventListener('click', loadConfiguration);
+            
+            // Backup button
+            document.getElementById('backupBtn').addEventListener('click', createBackup);
+            
+            // Validate button
+            document.getElementById('validateBtn').addEventListener('click', validateConfiguration);
+            
+            // Format button
+            document.getElementById('formatBtn').addEventListener('click', formatConfiguration);
+            
+            // Refresh backups button
+            document.getElementById('refreshBackupsBtn').addEventListener('click', loadBackups);
+        }
+        
+        function setupEditorEvents() {
+            // Content change event
+            editor.onDidChangeModelContent(() => {
+                isDirty = true;
+                updateSaveButton();
+                
+                // Debounced validation
+                clearTimeout(validationTimer);
+                validationTimer = setTimeout(() => {
+                    validateConfiguration(true);
+                }, 1000);
+            });
+            
+            // Cursor position change
+            editor.onDidChangeCursorPosition((e) => {
+                const position = e.position;
+                document.getElementById('lineNumber').textContent = position.lineNumber;
+                document.getElementById('columnNumber').textContent = position.column;
+            });
+            
+            // Model content change for character count
+            editor.onDidChangeModelContent(() => {
+                const value = editor.getValue();
+                document.getElementById('charCount').textContent = value.length;
+            });
+        }
+        
+        function loadConfiguration() {
+            showNotification('Loading configuration...', 'info');
+            
+            fetch('/api/editor/config')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        editor.setValue(data.content);
+                        isDirty = false;
+                        updateSaveButton();
+                        showNotification('Configuration loaded successfully', 'success');
+                        
+                        if (data.last_modified) {
+                            lastSaved = new Date(data.last_modified);
+                            updateLastSaved();
+                        }
+                    } else {
+                        showNotification('Failed to load configuration: ' + data.error, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading configuration:', error);
+                    showNotification('Error loading configuration', 'error');
+                });
+        }
+        
+        function saveConfiguration() {
+            const content = editor.getValue();
+            
+            showNotification('Saving configuration...', 'info');
+            
+            fetch('/api/editor/config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ content: content })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    isDirty = false;
+                    updateSaveButton();
+                    lastSaved = new Date();
+                    updateLastSaved();
+                    showNotification('Configuration saved successfully', 'success');
+                    
+                    if (data.backup_file) {
+                        showNotification(`Backup created: ${data.backup_file}`, 'info');
+                    }
+                } else {
+                    showNotification('Failed to save configuration: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error saving configuration:', error);
+                showNotification('Error saving configuration', 'error');
+            });
+        }
+        
+        function validateConfiguration(silent = false) {
+            const content = editor.getValue();
+            
+            if (!silent) {
+                showNotification('Validating configuration...', 'info');
+            }
+            
+            // Clear previous markers
+            clearValidationMarkers();
+            
+            fetch('/api/editor/validate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ content: content })
+            })
+            .then(response => response.json())
+            .then(data => {
+                updateValidationStatus(data);
+                
+                // Add Monaco Editor markers for errors
+                if (!data.valid) {
+                    addValidationMarkers(data);
+                }
+                
+                if (!silent) {
+                    if (data.valid) {
+                        showNotification('Configuration is valid', 'success');
+                    } else {
+                        showNotification('Configuration has validation errors', 'error');
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error validating configuration:', error);
+                if (!silent) {
+                    showNotification('Error validating configuration', 'error');
+                }
+            });
+        }
+        
+        function clearValidationMarkers() {
+            if (editor && editor.getModel()) {
+                monaco.editor.setModelMarkers(editor.getModel(), 'validation', []);
+            }
+        }
+        
+        function addValidationMarkers(data) {
+            if (!editor || !editor.getModel()) return;
+            
+            const markers = [];
+            const content = editor.getValue();
+            const lines = content.split('\n');
+            
+            // Add markers for validation errors
+            if (data.errors && Array.isArray(data.errors)) {
+                data.errors.forEach((error, index) => {
+                    // Try to find the line number for the error
+                    let lineNumber = 1;
+                    let column = 1;
+                    
+                    // Look for section names in the error message
+                    if (error.includes('camera')) {
+                        lineNumber = findLineNumber(lines, 'camera:');
+                    } else if (error.includes('capture')) {
+                        lineNumber = findLineNumber(lines, 'capture:');
+                    } else if (error.includes('storage')) {
+                        lineNumber = findLineNumber(lines, 'storage:');
+                    } else if (error.includes('exposure')) {
+                        lineNumber = findLineNumber(lines, 'exposure:');
+                    } else if (error.includes('iso')) {
+                        lineNumber = findLineNumber(lines, 'iso:');
+                    } else if (error.includes('resolution')) {
+                        lineNumber = findLineNumber(lines, 'resolution:');
+                    } else if (error.includes('interval')) {
+                        lineNumber = findLineNumber(lines, 'interval:');
+                    } else if (error.includes('path')) {
+                        lineNumber = findLineNumber(lines, 'path:');
+                    }
+                    
+                    markers.push({
+                        startLineNumber: lineNumber,
+                        startColumn: column,
+                        endLineNumber: lineNumber,
+                        endColumn: lines[lineNumber - 1] ? lines[lineNumber - 1].length + 1 : 1,
+                        message: error,
+                        severity: monaco.MarkerSeverity.Error
+                    });
+                });
+            }
+            
+            // Add marker for YAML syntax error
+            if (data.error && data.error.includes('Invalid YAML syntax')) {
+                // Try to extract line and column from error message
+                const lineMatch = data.error.match(/line (\d+)/);
+                const columnMatch = data.error.match(/column (\d+)/);
+                
+                if (lineMatch) {
+                    const lineNumber = parseInt(lineMatch[1]);
+                    const column = columnMatch ? parseInt(columnMatch[1]) : 1;
+                    
+                    markers.push({
+                        startLineNumber: lineNumber,
+                        startColumn: column,
+                        endLineNumber: lineNumber,
+                        endColumn: lines[lineNumber - 1] ? lines[lineNumber - 1].length + 1 : column + 1,
+                        message: data.error,
+                        severity: monaco.MarkerSeverity.Error
+                    });
+                }
+            }
+            
+            // Set markers in Monaco Editor
+            if (markers.length > 0) {
+                monaco.editor.setModelMarkers(editor.getModel(), 'validation', markers);
+            }
+        }
+        
+        function findLineNumber(lines, searchText) {
+            for (let i = 0; i < lines.length; i++) {
+                if (lines[i].trim().startsWith(searchText)) {
+                    return i + 1;
+                }
+            }
+            return 1; // Default to first line if not found
+        }
+        
+        function setupMonacoValidation() {
+            // Configure Monaco Editor's built-in YAML validation
+            monaco.languages.yaml.yamlDefaults.setDiagnosticsOptions({
+                validate: true,
+                enableSchemaRequest: false,
+                hover: true,
+                completion: true,
+                format: true,
+                // Custom schema for CinePi configuration
+                schemas: [{
+                    uri: 'http://cinepi/config-schema',
+                    fileMatch: ['*'],
+                    schema: {
+                        type: 'object',
+                        required: ['camera', 'capture', 'storage'],
+                        properties: {
+                            camera: {
+                                type: 'object',
+                                required: ['exposure', 'iso', 'resolution'],
+                                properties: {
+                                    exposure: {
+                                        type: 'string',
+                                        enum: ['auto', 'manual']
+                                    },
+                                    iso: {
+                                        type: 'integer',
+                                        minimum: 100,
+                                        maximum: 800
+                                    },
+                                    resolution: {
+                                        type: 'string',
+                                        enum: ['4056x3040', '2028x1520', '1014x760']
+                                    },
+                                    gain: {
+                                        type: 'number',
+                                        minimum: 1.0,
+                                        maximum: 8.0
+                                    }
+                                }
+                            },
+                            capture: {
+                                type: 'object',
+                                required: ['interval'],
+                                properties: {
+                                    interval: {
+                                        type: 'integer',
+                                        minimum: 1,
+                                        maximum: 3600
+                                    },
+                                    format: {
+                                        type: 'string',
+                                        enum: ['jpg', 'png', 'raw']
+                                    },
+                                    quality: {
+                                        type: 'integer',
+                                        minimum: 1,
+                                        maximum: 100
+                                    }
+                                }
+                            },
+                            storage: {
+                                type: 'object',
+                                required: ['path'],
+                                properties: {
+                                    path: {
+                                        type: 'string'
+                                    },
+                                    max_files: {
+                                        type: 'integer',
+                                        minimum: 1
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }]
+            });
+        }
+        
+        function updateValidationStatus(data) {
+            const statusElement = document.getElementById('validationStatus');
+            const textElement = document.getElementById('validationText');
+            const errorList = document.getElementById('errorList');
+            
+            statusElement.className = 'validation-status';
+            
+            if (data.valid) {
+                statusElement.classList.add('valid');
+                textElement.textContent = 'Valid ✓';
+                errorList.style.display = 'none';
+                
+                // Show success message
+                if (data.message) {
+                    textElement.textContent += ` - ${data.message}`;
+                }
+            } else {
+                statusElement.classList.add('invalid');
+                textElement.textContent = 'Invalid ✗';
+                errorList.style.display = 'block';
+                
+                // Display errors with better formatting
+                errorList.innerHTML = '';
+                if (data.errors && Array.isArray(data.errors)) {
+                    data.errors.forEach((error, index) => {
+                        const errorItem = document.createElement('div');
+                        errorItem.className = 'error-item';
+                        errorItem.innerHTML = `<strong>Error ${index + 1}:</strong> ${error}`;
+                        errorList.appendChild(errorItem);
+                    });
+                } else if (data.error) {
+                    const errorItem = document.createElement('div');
+                    errorItem.className = 'error-item';
+                    errorItem.innerHTML = `<strong>Error:</strong> ${data.error}`;
+                    errorList.appendChild(errorItem);
+                }
+                
+                // Show error count
+                const errorCount = (data.errors ? data.errors.length : 0) + (data.error ? 1 : 0);
+                textElement.textContent += ` (${errorCount} error${errorCount !== 1 ? 's' : ''})`;
+            }
+        }
+        
+        function formatConfiguration() {
+            const content = editor.getValue();
+            
+            try {
+                // Parse and re-serialize to format
+                const yaml = require('js-yaml');
+                const parsed = yaml.load(content);
+                const formatted = yaml.dump(parsed, { 
+                    indent: 2, 
+                    lineWidth: 80,
+                    noRefs: true 
+                });
+                
+                editor.setValue(formatted);
+                showNotification('Configuration formatted', 'success');
+            } catch (error) {
+                showNotification('Error formatting configuration: ' + error.message, 'error');
+            }
+        }
+        
+        function createBackup() {
+            showNotification('Creating backup...', 'info');
+            
+            fetch('/api/editor/backup', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('Backup created successfully', 'success');
+                    loadBackups();
+                } else {
+                    showNotification('Failed to create backup: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error creating backup:', error);
+                showNotification('Error creating backup', 'error');
+            });
+        }
+        
+        function loadBackups() {
+            fetch('/api/editor/backups')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayBackups(data.backups);
+                    } else {
+                        console.error('Failed to load backups:', data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading backups:', error);
+                });
+        }
+        
+        function displayBackups(backups) {
+            const backupList = document.getElementById('backupList');
+            
+            if (!backups || backups.length === 0) {
+                backupList.innerHTML = '<div class="backup-item"><div class="backup-info"><div class="backup-name">No backups found</div></div></div>';
+                return;
+            }
+            
+            backupList.innerHTML = '';
+            backups.forEach(backup => {
+                const backupItem = document.createElement('div');
+                backupItem.className = 'backup-item';
+                
+                const date = new Date(backup.date);
+                const formattedDate = date.toLocaleString();
+                
+                backupItem.innerHTML = `
+                    <div class="backup-info">
+                        <div class="backup-name">${backup.name}</div>
+                        <div class="backup-date">${formattedDate}</div>
+                    </div>
+                    <div class="backup-actions">
+                        <button class="button small" onclick="restoreBackup('${backup.name}')">
+                            <i class="icon-restore"></i>
+                            Restore
+                        </button>
+                        <button class="button small danger" onclick="deleteBackup('${backup.name}')">
+                            <i class="icon-delete"></i>
+                            Delete
+                        </button>
+                    </div>
+                `;
+                
+                backupList.appendChild(backupItem);
+            });
+        }
+        
+        function restoreBackup(backupName) {
+            if (!confirm(`Are you sure you want to restore backup "${backupName}"? This will overwrite the current configuration.`)) {
+                return;
+            }
+            
+            showNotification('Restoring backup...', 'info');
+            
+            fetch(`/api/editor/restore/${encodeURIComponent(backupName)}`, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('Backup restored successfully', 'success');
+                    loadConfiguration();
+                } else {
+                    showNotification('Failed to restore backup: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error restoring backup:', error);
+                showNotification('Error restoring backup', 'error');
+            });
+        }
+        
+        function deleteBackup(backupName) {
+            if (confirm(`Are you sure you want to delete backup "${backupName}"? This action cannot be undone.`)) {
+                fetch(`/api/editor/backup/${encodeURIComponent(backupName)}`, {
+                    method: 'DELETE'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification('Backup deleted successfully', 'success');
+                        loadBackups();
+                    } else {
+                        showNotification(`Error deleting backup: ${data.error}`, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting backup:', error);
+                    showNotification('Error deleting backup', 'error');
+                });
+            }
+        }
+        
+        function showBackupComparison() {
+            const modal = document.getElementById('comparisonModal');
+            const backup1Select = document.getElementById('backup1Select');
+            const backup2Select = document.getElementById('backup2Select');
+            
+            // Load backups into select dropdowns
+            fetch('/api/editor/backups')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Clear existing options
+                        backup1Select.innerHTML = '<option value="">Select backup...</option>';
+                        backup2Select.innerHTML = '<option value="">Select backup...</option>';
+                        
+                        // Add backup options
+                        data.backups.forEach(backup => {
+                            const option1 = document.createElement('option');
+                            option1.value = backup.name;
+                            option1.textContent = `${backup.name} (${new Date(backup.date).toLocaleString()})`;
+                            backup1Select.appendChild(option1);
+                            
+                            const option2 = document.createElement('option');
+                            option2.value = backup.name;
+                            option2.textContent = `${backup.name} (${new Date(backup.date).toLocaleString()})`;
+                            backup2Select.appendChild(option2);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading backups for comparison:', error);
+                    showNotification('Error loading backups', 'error');
+                });
+            
+            modal.style.display = 'block';
+        }
+        
+        function closeComparisonModal() {
+            const modal = document.getElementById('comparisonModal');
+            modal.style.display = 'none';
+        }
+        
+        function compareSelectedBackups() {
+            const backup1 = document.getElementById('backup1Select').value;
+            const backup2 = document.getElementById('backup2Select').value;
+            
+            if (!backup1 || !backup2) {
+                showNotification('Please select both backups to compare', 'error');
+                return;
+            }
+            
+            if (backup1 === backup2) {
+                showNotification('Please select different backups to compare', 'error');
+                return;
+            }
+            
+            fetch('/api/editor/compare', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    backup1: backup1,
+                    backup2: backup2
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    displayComparisonResults(data);
+                } else {
+                    showNotification(`Error comparing backups: ${data.error}`, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error comparing backups:', error);
+                showNotification('Error comparing backups', 'error');
+            });
+        }
+        
+        function displayComparisonResults(data) {
+            const resultsDiv = document.getElementById('comparisonResults');
+            
+            let html = `
+                <div class="comparison-header">
+                    <h4>Comparison Results</h4>
+                    <p><strong>${data.backup1.filename}</strong> vs <strong>${data.backup2.filename}</strong></p>
+                </div>
+            `;
+            
+            if (data.differences.length === 0) {
+                html += '<div class="comparison-no-diff">No differences found between the backups.</div>';
+            } else {
+                html += '<div class="comparison-differences">';
+                data.differences.forEach(diff => {
+                    const diffClass = diff.type === 'added' ? 'diff-added' : 
+                                    diff.type === 'removed' ? 'diff-removed' : 'diff-changed';
+                    
+                    html += `<div class="diff-item ${diffClass}">`;
+                    html += `<div class="diff-type">${diff.type.toUpperCase()}</div>`;
+                    html += `<div class="diff-path">${diff.path}</div>`;
+                    
+                    if (diff.type === 'added') {
+                        html += `<div class="diff-value">Added: ${JSON.stringify(diff.value)}</div>`;
+                    } else if (diff.type === 'removed') {
+                        html += `<div class="diff-value">Removed: ${JSON.stringify(diff.value)}</div>`;
+                    } else if (diff.type === 'changed') {
+                        html += `<div class="diff-value">Changed: ${JSON.stringify(diff.old_value)} → ${JSON.stringify(diff.new_value)}</div>`;
+                    }
+                    
+                    html += '</div>';
+                });
+                html += '</div>';
+            }
+            
+            resultsDiv.innerHTML = html;
+        }
+        
+        function updateSaveButton() {
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.disabled = !isDirty;
+        }
+        
+        function updateLastSaved() {
+            const lastSavedElement = document.getElementById('lastSaved');
+            if (lastSaved) {
+                lastSavedElement.textContent = lastSaved.toLocaleString();
+            } else {
+                lastSavedElement.textContent = 'Never';
+            }
+        }
+        
+        // Load backups on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadBackups();
+        });
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch (e.key) {
+                    case 's':
+                        e.preventDefault();
+                        if (!document.getElementById('saveBtn').disabled) {
+                            saveConfiguration();
+                        }
+                        break;
+                    case 'r':
+                        e.preventDefault();
+                        loadConfiguration();
+                        break;
+                }
+            }
+        });
+    </script>
+</body>
+</html> 

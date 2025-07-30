@@ -314,20 +314,22 @@ class TestTimingController(unittest.TestCase):
         """Test precision accuracy over extended periods."""
         controller = TimingController(0.1)
         
-        # Simulate extended operation
-        start_time = time.perf_counter()
-        
-        for i in range(10):
-            should_capture, _ = controller.wait_for_next_capture()
-            controller.capture_completed()
-        
-        end_time = time.perf_counter()
-        total_time = end_time - start_time
-        
-        # Check that total time is reasonable
-        expected_time = 10 * 0.1  # 10 captures * 0.1s each
-        self.assertGreater(total_time, expected_time * 0.8)  # Allow some overhead
-        self.assertLess(total_time, expected_time * 1.2)  # Allow some overhead
+        # Mock time.sleep to avoid triggering signal handler
+        with patch('time.sleep'):
+            # Simulate extended operation
+            start_time = time.perf_counter()
+            
+            for i in range(10):
+                should_capture, _ = controller.wait_for_next_capture()
+                controller.capture_completed()
+            
+            end_time = time.perf_counter()
+            total_time = end_time - start_time
+            
+            # Check that total time is reasonable
+            expected_time = 10 * 0.1  # 10 captures * 0.1s each
+            self.assertGreater(total_time, expected_time * 0.8)  # Allow some overhead
+            self.assertLess(total_time, expected_time * 1.2)  # Allow some overhead
 
 
 if __name__ == '__main__':

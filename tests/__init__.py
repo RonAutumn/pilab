@@ -1,1 +1,1 @@
-"""Test package for CinePi timelapse system."""
+# Tests package for CinePi Dashboard

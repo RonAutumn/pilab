@@ -1,25 +1,24 @@
-# CinePi Timelapse System Dependencies
-# Core camera and image processing libraries
-picamera2>=0.3.12
-opencv-python>=4.8.0
+# Core Flask dependencies
+Flask==2.3.3
+Flask-SocketIO==5.3.6
+Flask-Compress==1.14
 
-# Configuration management
-PyYAML>=6.0
+# CinePi integration
+PyYAML==6.0.1
+opencv-python==4.8.1.78
 
-# Image processing and analysis
-Pillow>=10.0.0
-numpy>=1.24.0
+# System monitoring
+psutil==5.9.6
 
-# System utilities (usually included with Python)
-# pathlib - included in Python 3.4+
-# argparse - included in Python standard library
-# logging - included in Python standard library
-# datetime - included in Python standard library
-# signal - included in Python standard library
-# shutil - included in Python standard library
-# tempfile - included in Python standard library
+# WebSocket and real-time
+python-socketio==5.9.0
+eventlet==0.33.3
 
-# Optional: For development and testing
-# pytest>=7.0.0  # Uncomment for testing
-# black>=23.0.0  # Uncomment for code formatting
-# flake8>=6.0.0  # Uncomment for linting
+# Development and testing
+pytest==7.4.2
+pytest-flask==1.3.0
+black==23.9.1
+flake8==6.1.0
+
+# Production
+gunicorn==21.2.0

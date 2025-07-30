@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CinePi Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+</head>
+<body>
+
+
+    <div class="container" role="main" id="main-content">
+        <!-- Header -->
+        <header class="header" role="banner">
+            <h1>CinePi Dashboard</h1>
+            <p>Professional Timelapse Camera Control System</p>
+            <div class="connection-status">
+                <span class="status-indicator" id="connectionStatus" title="Connection Status"></span>
+                <span id="connectionText">Connecting...</span>
+            </div>
+        </header>
+
+        <!-- Status Grid -->
+        <section class="status-grid" aria-labelledby="status-heading">
+            <h2 id="status-heading" class="sr-only">System Status Overview</h2>
+            <!-- Camera Status Card -->
+            <div class="status-card" id="cameraStatusCard">
+                <h3>Camera Status</h3>
+                <p><strong>Status:</strong> <span class="status-text">{{ camera_status.status if camera_status else 'Unknown' }}</span></p>
+                <p><strong>Connected:</strong> <span class="connected-text">{{ 'Yes' if camera_status and camera_status.connected else 'No' }}</span></p>
+                {% if camera_status and camera_status.error %}
+                <p><strong>Error:</strong> <span class="error-text">{{ camera_status.error }}</span></p>
+                {% endif %}
+                <div class="status-actions">
+                    <button class="button" onclick="dashboard.refreshCameraStatus()">Refresh</button>
+                </div>
+            </div>
+
+            <!-- Session Status Card -->
+            <div class="status-card" id="sessionStatusCard">
+                <h3>Session Status</h3>
+                <p><strong>Status:</strong> <span class="status-text">{{ session_info.status if session_info else 'Inactive' }}</span></p>
+                <p><strong>Captures:</strong> <span class="captures-text">{{ session_info.captures if session_info else 0 }}</span></p>
+                {% if session_info and session_info.interval %}
+                <p><strong>Interval:</strong> <span class="interval-text">{{ session_info.interval }}s</span></p>
+                {% endif %}
+                {% if session_info and session_info.elapsed_time %}
+                <p><strong>Elapsed:</strong> <span class="elapsed-text">{{ session_info.elapsed_time }}</span></p>
+                {% endif %}
+            </div>
+
+            <!-- System Status Card -->
+            <div class="status-card" id="systemStatusCard">
+                <h3>System Status</h3>
+                <p><strong>CPU:</strong> <span class="cpu-text">--</span></p>
+                <p><strong>Memory:</strong> <span class="memory-text">--</span></p>
+                <p><strong>Disk:</strong> <span class="disk-text">--</span></p>
+                <p><strong>Uptime:</strong> <span class="uptime-text">--</span></p>
+            </div>
+
+            <!-- Configuration Card -->
+            <div class="status-card">
+                <h3>Configuration</h3>
+                <p><strong>Min Interval:</strong> {{ config.min_interval }}s</p>
+                <p><strong>Max Interval:</strong> {{ config.max_interval }}s</p>
+                <p><strong>Default Interval:</strong> {{ config.default_interval }}s</p>
+                <div class="status-actions">
+                    <button class="button" onclick="dashboard.loadSettings()">Refresh</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Capture Control Panel -->
+        <div class="control-panel">
+            <h3>Capture Controls</h3>
+            
+            <!-- Real-time Status Indicators -->
+            <div class="status-indicators">
+                <div class="status-indicator-item">
+                    <span class="indicator-label">Status:</span>
+                    <span class="indicator-value" id="captureStatus">Inactive</span>
+                </div>
+                <div class="status-indicator-item">
+                    <span class="indicator-label">Next Capture:</span>
+                    <span class="indicator-value" id="nextCaptureCountdown">--</span>
+                </div>
+                <div class="status-indicator-item">
+                    <span class="indicator-label">Total Captures:</span>
+                    <span class="indicator-value" id="totalCaptures">0</span>
+                </div>
+                <div class="status-indicator-item">
+                    <span class="indicator-label">Session Time:</span>
+                    <span class="indicator-value" id="sessionTime">--</span>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="intervalSlider">Interval: <span id="intervalDisplay">{{ config.default_interval }} seconds</span></label>
+                    <input type="range" id="intervalSlider" class="form-control slider" 
+                           value="{{ config.default_interval }}" 
+                           min="{{ config.min_interval }}" 
+                           max="{{ config.max_interval }}" 
+                           step="5">
+                    <div class="slider-labels">
+                        <span>{{ config.min_interval }}s</span>
+                        <span>{{ config.max_interval }}s</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Real-time Updates:</label>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="realtimeToggle" checked>
+                        <span class="toggle-slider"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="button-group">
+                <button class="button success large" id="startCapture" data-original-text="Start Timelapse">
+                    <i class="icon-play"></i>
+                    Start Timelapse
+                </button>
+                <button class="button danger large" id="stopCapture" data-original-text="Stop Timelapse">
+                    <i class="icon-stop"></i>
+                    Stop Timelapse
+                </button>
+                <button class="button large" id="takeSnapshot" data-original-text="Take Snapshot">
+                    <i class="icon-camera"></i>
+                    Take Snapshot
+                </button>
+            </div>
+            
+            <!-- Progress Bar for Active Session -->
+            <div class="progress-container" id="progressContainer" style="display: none;">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">Session Progress</div>
+            </div>
+        </div>
+
+        <!-- Camera Settings Panel -->
+        <div class="settings-panel">
+            <h3>Camera Settings</h3>
+            <div class="settings-status">
+                <span class="status-indicator" id="settingsStatus" title="Settings Status"></span>
+                <span id="settingsStatusText">Ready</span>
+            </div>
+            
+            <form id="settingsForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="exposure">Exposure Mode:</label>
+                        <div class="toggle-switch large">
+                            <input type="checkbox" id="exposure" name="exposure_mode" value="manual">
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label" id="exposureLabel">Auto</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="isoSlider">ISO: <span id="isoDisplay">400</span></label>
+                        <input type="range" id="isoSlider" name="iso" class="form-control slider" 
+                               min="100" max="800" step="100" value="400">
+                        <div class="slider-labels">
+                            <span>100</span>
+                            <span>800</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="gainSlider">Gain: <span id="gainDisplay">2.0</span></label>
+                        <input type="range" id="gainSlider" name="gain" class="form-control slider" 
+                               min="1.0" max="8.0" step="0.1" value="2.0">
+                        <div class="slider-labels">
+                            <span>1.0</span>
+                            <span>8.0</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="resolution">Resolution:</label>
+                        <select id="resolution" name="resolution" class="form-control">
+                            <option value="4056x3040">4056x3040 (Full Resolution)</option>
+                            <option value="2028x1520">2028x1520 (Half Resolution)</option>
+                            <option value="1014x760">1014x760 (Quarter Resolution)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="button-group">
+                    <button type="submit" class="button success large" id="updateSettings" data-original-text="Update Settings">
+                        <i class="icon-save"></i>
+                        Update Settings
+                    </button>
+                    <button type="button" class="button large" id="refreshSettings" data-original-text="Refresh Settings">
+                        <i class="icon-refresh"></i>
+                        Refresh Settings
+                    </button>
+                    <button type="button" class="button large" id="resetSettings" data-original-text="Reset to Defaults">
+                        <i class="icon-reset"></i>
+                        Reset to Defaults
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Current Settings Display -->
+        <div class="control-panel">
+            <h3>Current Settings</h3>
+            <div id="currentSettings">
+                <p class="text-center">Loading current settings...</p>
+            </div>
+        </div>
+
+        <!-- Live Preview -->
+        <div class="stream-container">
+            <h3>Live Preview</h3>
+            <div class="stream-placeholder" id="streamContainer">
+                <div class="stream-info">
+                    <p>MJPEG Stream</p>
+                    <p>Stream URL: /stream</p>
+                    <button class="button" onclick="dashboard.toggleStream()">Start Stream</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Captures -->
+        <div class="control-panel">
+            <h3>Recent Captures</h3>
+            <div id="recentCaptures">
+                <p class="text-center">Loading recent captures...</p>
+            </div>
+            <div class="button-group">
+                <button class="button" onclick="dashboard.loadRecentCaptures()">Refresh</button>
+                <button class="button" onclick="dashboard.openCapturesFolder()">Open Folder</button>
+            </div>
+        </div>
+
+        <!-- Configuration Editor -->
+        <div class="control-panel">
+            <h3>Configuration Management</h3>
+            <p>Edit CinePi configuration with real-time validation and backup/restore functionality.</p>
+            <div class="button-group">
+                <a href="/editor" class="button success large">
+                    <i class="icon-edit"></i>
+                    Open YAML Editor
+                </a>
+                <button class="button" onclick="dashboard.createConfigBackup()">
+                    <i class="icon-backup"></i>
+                    Create Backup
+                </button>
+            </div>
+        </div>
+
+        <!-- API Endpoints Info -->
+        <div class="control-panel">
+            <h3>API Endpoints</h3>
+            <div class="endpoints-grid">
+                <div class="endpoint-item">
+                    <strong>Status:</strong> <a href="/api/status" target="_blank">/api/status</a>
+                </div>
+                <div class="endpoint-item">
+                    <strong>Health:</strong> <a href="/health" target="_blank">/health</a>
+                </div>
+                <div class="endpoint-item">
+                    <strong>Settings:</strong> <a href="/api/camera/settings" target="_blank">/api/camera/settings</a>
+                </div>
+                <div class="endpoint-item">
+                    <strong>Captures:</strong> <a href="/api/capture/list" target="_blank">/api/capture/list</a>
+                </div>
+                <div class="endpoint-item">
+                    <strong>Editor:</strong> <a href="/editor" target="_blank">/editor</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    
+    <!-- Initialize dashboard -->
+    <script>
+        // Store original button text for loading states
+        document.addEventListener('DOMContentLoaded', function() {
+            const buttons = document.querySelectorAll('.button[data-original-text]');
+            buttons.forEach(button => {
+                if (!button.getAttribute('data-original-text')) {
+                    button.setAttribute('data-original-text', button.textContent);
+                }
+            });
+        });
+    </script>
+</body>
+</html> 

@@ -18,7 +18,7 @@ except ImportError:
     Picamera2 = None
     controls = None
 
-from config_manager import ConfigManager
+from .config_manager import ConfigManager
 
 logger = logging.getLogger(__name__)
 
