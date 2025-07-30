@@ -18,10 +18,10 @@ from collections import deque
 # Add src directory to Python path for imports
 sys.path.insert(0, str(Path(__file__).parent))
 
-from .config_manager import ConfigManager
-from .metrics import MetricsLogger, ImageQualityMetrics
-from .capture_utils import CameraManager
-from .timing_controller import TimingController
+from config_manager import ConfigManager
+from metrics import MetricsLogger, ImageQualityMetrics
+from capture_utils import CameraManager
+from timing_controller import TimingController
 
 # Global variables for graceful shutdown
 shutdown_requested = False
