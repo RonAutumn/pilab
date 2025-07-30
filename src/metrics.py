@@ -228,10 +228,17 @@ class MetricsLogger:
             temp_path = self.csv_path.with_suffix('.csv.tmp')
             
             with open(temp_path, 'w', newline='') as csvfile:
+                # IMPORTANT: All fields written to CSV must be declared in fieldnames list
+                # This prevents CSV field mismatch errors and ensures data consistency.
+                # Fields are written from main.py metadata dict: filepath, capture_number, interval_seconds
+                # plus additional fields from image processing and system monitoring.
                 fieldnames = [
                     'timestamp',
                     'image_path',
                     'filename',
+                    'filepath',           # Full path to captured image (from main.py)
+                    'capture_number',     # Sequential capture number (from main.py)
+                    'interval_seconds',   # Target interval between captures (from main.py)
                     'sharpness_score',
                     'brightness_value',
                     'brightness_warnings',

@@ -8,7 +8,7 @@ import tempfile
 import os
 import shutil
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock, mock_open
+from unittest.mock import Mock, patch, MagicMock, mock_open, call
 import numpy as np
 
 from src.capture_utils import CameraManager, ImageProcessor
@@ -96,7 +96,6 @@ class TestCameraManager:
         assert result is False
         assert self.camera_manager.is_initialized is False
     
-    @patch('src.capture_utils.PICAMERA_AVAILABLE', True)
     @patch('src.capture_utils.Picamera2')
     @patch('src.capture_utils.controls')
     def test_apply_camera_settings_success(self, mock_controls, mock_picamera2):
@@ -104,10 +103,6 @@ class TestCameraManager:
         # Mock camera
         mock_camera = Mock()
         self.camera_manager.camera = mock_camera
-        
-        # Mock controls
-        mock_controls.AeExposureMode.Auto = 'auto'
-        mock_controls.AwbModeEnum.Auto = 'auto'
         
         camera_config = {
             'exposure_mode': 'auto',
@@ -118,8 +113,13 @@ class TestCameraManager:
         
         self.camera_manager._apply_camera_settings(camera_config)
         
-        # Verify controls were set
-        mock_camera.set_controls.assert_called()
+        # Verify controls were set with new Picamera2 control names
+        expected_calls = [
+            call({"AeEnable": True}),  # Auto exposure enabled
+            call({"AnalogueGain": 1.0}),  # ISO 100 converted to gain
+            call({"AwbEnable": True})  # Auto white balance enabled
+        ]
+        mock_camera.set_controls.assert_has_calls(expected_calls, any_order=True)
     
     @patch('src.capture_utils.PICAMERA_AVAILABLE', True)
     @patch('src.capture_utils.Picamera2')

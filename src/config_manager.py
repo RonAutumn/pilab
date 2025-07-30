@@ -159,19 +159,13 @@ class ConfigManager:
         
         # Validate exposure mode
         exposure_mode = self.get('camera.exposure_mode', 'auto')
-        valid_exposure_modes = [
-            'auto', 'night', 'backlight', 'spotlight', 'sports', 
-            'snow', 'beach', 'verylong', 'fixedfps', 'antishake', 'fireworks'
-        ]
+        valid_exposure_modes = ['auto', 'manual']
         if not isinstance(exposure_mode, str) or exposure_mode not in valid_exposure_modes:
             errors.append(f"camera.exposure_mode must be one of: {valid_exposure_modes}")
         
         # Validate AWB mode
         awb_mode = self.get('camera.awb_mode', 'auto')
-        valid_awb_modes = [
-            'auto', 'sunlight', 'cloudy', 'shade', 'tungsten', 
-            'fluorescent', 'incandescent', 'flash', 'horizon'
-        ]
+        valid_awb_modes = ['auto']
         if not isinstance(awb_mode, str) or awb_mode not in valid_awb_modes:
             errors.append(f"camera.awb_mode must be one of: {valid_awb_modes}")
         

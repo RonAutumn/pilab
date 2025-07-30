@@ -47,7 +47,7 @@ except ImportError:
     Flask = None
     Response = None
 
-from config_manager import ConfigManager
+from src.config_manager import ConfigManager
 
 # Global variables for graceful shutdown
 shutdown_requested = False
@@ -142,46 +142,52 @@ class FrameDispatcher:
             return False
     
     def _apply_camera_settings(self, camera_config: Dict[str, Any]) -> None:
-        """Apply basic camera settings for preview."""
+        """
+        Apply camera settings from configuration using valid Picamera2 controls.
+        
+        This method uses direct Picamera2 control assignments instead of enum-based
+        mappings to avoid the 'libcamera._libcamera.ControlId' object has no attribute 'Auto'
+        error. The controls used are:
+        
+        - AeEnable: Boolean flag for auto exposure (True = auto, False = manual)
+        - AwbEnable: Boolean flag for auto white balance (True = auto, False = manual)
+        - ExposureTime: Manual exposure time in microseconds (when AeEnable = False)
+        - AnalogueGain: ISO sensitivity as gain value (iso / 100.0)
+        
+        Args:
+            camera_config: Dictionary containing camera configuration settings
+        """
         if not self.camera:
             return
             
         try:
-            # Set exposure mode (auto for preview)
+            # Set auto exposure enable/disable
             exposure_mode = camera_config.get('exposure_mode', 'auto')
-            if hasattr(controls, 'AeExposureMode'):
-                exposure_map = {
-                    'auto': controls.AeExposureMode.Auto,
-                    'night': controls.AeExposureMode.Night,
-                    'backlight': controls.AeExposureMode.BackLight,
-                    'spotlight': controls.AeExposureMode.SpotLight,
-                    'sports': controls.AeExposureMode.Sports,
-                    'snow': controls.AeExposureMode.Snow,
-                    'beach': controls.AeExposureMode.Beach,
-                    'verylong': controls.AeExposureMode.VeryLong,
-                    'fixedfps': controls.AeExposureMode.FixedFPS,
-                    'antishake': controls.AeExposureMode.AntiShake,
-                    'fireworks': controls.AeExposureMode.Fireworks
-                }
-                if exposure_mode in exposure_map:
-                    self.camera.set_controls({"AeExposureMode": exposure_map[exposure_mode]})
+            if exposure_mode == 'auto':
+                # Enable auto exposure using AeEnable control
+                self.camera.set_controls({"AeEnable": True})
+            else:
+                # Disable auto exposure and set manual exposure time
+                self.camera.set_controls({"AeEnable": False})
+                shutter_speed = camera_config.get('shutter_speed', 0)
+                if shutter_speed > 0:
+                    self.camera.set_controls({"ExposureTime": shutter_speed})
             
-            # Set AWB mode
+            # Set ISO (AnalogueGain) - converts ISO value to gain
+            iso = camera_config.get('iso', 100)
+            self.camera.set_controls({"AnalogueGain": iso / 100.0})
+            
+            # Set auto white balance enable/disable
             awb_mode = camera_config.get('awb_mode', 'auto')
-            if hasattr(controls, 'AwbMode'):
-                awb_map = {
-                    'auto': controls.AwbMode.Auto,
-                    'sunlight': controls.AwbMode.Sunlight,
-                    'cloudy': controls.AwbMode.Cloudy,
-                    'shade': controls.AwbMode.Shade,
-                    'tungsten': controls.AwbMode.Tungsten,
-                    'fluorescent': controls.AwbMode.Fluorescent,
-                    'incandescent': controls.AwbMode.Incandescent,
-                    'flash': controls.AwbMode.Flash,
-                    'horizon': controls.AwbMode.Horizon
-                }
-                if awb_mode in awb_map:
-                    self.camera.set_controls({"AwbMode": awb_map[awb_mode]})
+            if awb_mode == 'auto':
+                # Enable auto white balance using AwbEnable control
+                self.camera.set_controls({"AwbEnable": True})
+            else:
+                # Disable auto white balance and set manual mode
+                self.camera.set_controls({"AwbEnable": False})
+                # Note: Manual white balance modes would need additional controls
+                # For now, we'll keep auto white balance enabled for non-auto modes
+                logger.info(f"Manual white balance mode '{awb_mode}' requested but not yet implemented")
                     
         except Exception as e:
             logger.warning(f"Could not apply all camera settings: {e}")

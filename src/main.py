@@ -18,10 +18,10 @@ from collections import deque
 # Add src directory to Python path for imports
 sys.path.insert(0, str(Path(__file__).parent))
 
-from config_manager import ConfigManager
-from metrics import MetricsLogger, ImageQualityMetrics
-from capture_utils import CameraManager
-from timing_controller import TimingController
+from .config_manager import ConfigManager
+from .metrics import MetricsLogger, ImageQualityMetrics
+from .capture_utils import CameraManager
+from .timing_controller import TimingController
 
 # Global variables for graceful shutdown
 shutdown_requested = False
@@ -372,6 +372,12 @@ Examples:
         help='Test configuration without capturing images'
     )
     
+    parser.add_argument(
+        '--suppress-drift',
+        action='store_true',
+        help='Suppress system clock drift warnings (useful for systems with frequent NTP adjustments)'
+    )
+    
     return parser.parse_args()
 
 
@@ -668,7 +674,7 @@ def capture_loop(config: ConfigManager, camera: CameraManager, metrics: MetricsL
         logger.info(f"Timelapse will run until: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
     
     # Initialize timing controller for precise timing
-    timing_controller = TimingController(interval, max_drift_threshold=1.0)
+    timing_controller = TimingController(interval, max_drift_threshold=1.0, suppress_drift_warnings=args.suppress_drift)
     
     # Initialize counters and timing
     capture_count = 0

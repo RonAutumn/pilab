@@ -1,7 +1,13 @@
 # CinePi Timelapse System Dependencies
 # Core camera and image processing libraries
-picamera2>=0.3.12
-opencv-python>=4.8.0
+# Note: picamera2 is typically installed via apt on Raspberry Pi OS (recommended)
+# This pip version pin is for environments where apt is not used
+# Avoid mixing pip and apt installations to prevent conflicts
+picamera2==0.3.12
+
+# Computer vision and image processing
+# Pinned to prevent breaking changes from future releases
+opencv-python>=4.8.0,<5.0.0
 
 # Configuration management
 PyYAML>=6.0

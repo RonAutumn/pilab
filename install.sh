@@ -56,7 +56,12 @@ pip install -r requirements.txt
 # Create necessary directories
 echo "📁 Creating directories..."
 mkdir -p output/images
+
+# Create logs directory for application logging
+# This ensures the logging structure is always present for metadata logging and system logs
+echo "📝 Creating logs directory..."
 mkdir -p logs
+chmod 775 logs  # Set appropriate permissions for logging
 
 # Copy configuration if it doesn't exist
 if [ ! -f config.yaml ]; then

@@ -41,9 +41,10 @@ class TimingController:
     - System clock adjustment detection
     - Comprehensive timing statistics
     - Adaptive sleep intervals for optimal performance
+    - Configurable drift warning suppression
     """
     
-    def __init__(self, interval_seconds: float, max_drift_threshold: float = 1.0):
+    def __init__(self, interval_seconds: float, max_drift_threshold: float = 1.0, suppress_drift_warnings: bool = False):
         """
         Initialize the timing controller.
         
@@ -79,8 +80,14 @@ class TimingController:
         # Performance optimization
         self.sleep_interval = min(1.0, interval_seconds / 10)  # Adaptive sleep
         
+        # Drift warning suppression
+        self.suppress_drift_warnings = suppress_drift_warnings
+        self.drift_warning_count = 0
+        self.max_drift_warnings = 3  # Show first 3 warnings, then downgrade to INFO
+        
         logger.info(f"Timing controller initialized: interval={interval_seconds}s, "
-                   f"max_drift_threshold={max_drift_threshold}s")
+                   f"max_drift_threshold={max_drift_threshold}s, "
+                   f"drift_warnings={'suppressed' if suppress_drift_warnings else 'enabled'}")
     
     def _detect_system_clock_adjustment(self) -> bool:
         """
@@ -94,7 +101,27 @@ class TimingController:
         
         # If system time jumped more than 1 second, likely a clock adjustment
         if time_diff > 1.0:
-            logger.warning(f"System clock adjustment detected: {time_diff:.2f}s jump")
+            self.drift_warning_count += 1
+            
+            # Determine log level based on suppression settings and warning count
+            if self.suppress_drift_warnings:
+                # Suppress all drift warnings
+                log_level = logging.DEBUG
+            elif self.drift_warning_count <= self.max_drift_warnings:
+                # First N warnings at WARNING level
+                log_level = logging.WARNING
+            else:
+                # Subsequent warnings at INFO level
+                log_level = logging.INFO
+            
+            # Log the adjustment with appropriate level
+            if log_level == logging.WARNING:
+                logger.warning(f"System clock adjustment detected: {time_diff:.2f}s jump")
+            elif log_level == logging.INFO:
+                logger.info(f"System clock adjustment detected: {time_diff:.2f}s jump (warning #{self.drift_warning_count})")
+            else:
+                logger.debug(f"System clock adjustment detected: {time_diff:.2f}s jump (suppressed)")
+            
             self.system_clock_adjustments += 1
             self.last_system_time = current_system_time
             return True
@@ -251,7 +278,9 @@ class TimingController:
             'total_drift': stats.total_drift,
             'avg_drift_per_capture': stats.total_drift / max(1, stats.capture_count),
             'drift_percentage': (stats.drift_accumulated / self.interval_seconds) * 100,
-            'system_clock_adjustments': stats.system_clock_adjustments
+            'system_clock_adjustments': stats.system_clock_adjustments,
+            'drift_warnings_suppressed': self.suppress_drift_warnings,
+            'drift_warning_count': self.drift_warning_count
         }
     
     def reset_drift(self) -> None:
@@ -259,6 +288,11 @@ class TimingController:
         logger.info("Resetting accumulated drift")
         self.drift_accumulated = 0.0
         self.next_capture_time = time.perf_counter() + self.interval_seconds
+    
+    def reset_drift_warnings(self) -> None:
+        """Reset drift warning counter (useful for new sessions)."""
+        logger.debug("Resetting drift warning counter")
+        self.drift_warning_count = 0
     
     def adjust_interval(self, new_interval: float) -> None:
         """

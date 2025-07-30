@@ -21,11 +21,13 @@ camera:
   shutter_speed: 0
   
   # Exposure mode
-  # Options: auto, night, backlight, spotlight, sports, snow, beach, verylong, fixedfps, antishake, fireworks
+  # Options: auto (automatic exposure), manual (manual exposure with shutter_speed)
+  # Note: Only 'auto' is currently fully implemented. Manual modes require shutter_speed > 0
   exposure_mode: "auto"
   
   # Auto white balance mode
-  # Options: auto, sunlight, cloudy, shade, tungsten, fluorescent, incandescent, flash, horizon
+  # Options: auto (automatic white balance)
+  # Note: Only 'auto' is currently implemented. Manual white balance modes coming soon.
   awb_mode: "auto"
 
 # Timelapse settings
