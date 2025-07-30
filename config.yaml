@@ -1,0 +1,100 @@
+# CinePi Configuration File
+# Raspberry Pi Timelapse Camera System Settings
+
+camera:
+  # Camera resolution [width, height]
+  # Options: [4056, 3040] (HQ Camera max), [3280, 2464] (v2 Camera max)
+  resolution: [4056, 3040]
+  
+  # Exposure mode for optimal image quality
+  # Options: auto, night, nightpreview, backlight, spotlight, sports, snow, beach, verylong, fixedfps, antishake, fireworks
+  exposure_mode: "auto"
+  
+  # ISO sensitivity (100-800 for best quality)
+  iso: 100
+  
+  # Shutter speed in microseconds (0 = auto)
+  # Examples: 10000 = 1/100s, 33333 = 1/30s, 100000 = 1/10s
+  shutter_speed: 0
+  
+  # White balance mode
+  # Options: auto, sunlight, cloudy, shade, tungsten, fluorescent, incandescent, flash, horizon
+  awb_mode: "auto"
+  
+  # Image quality (1-100, higher = better quality, larger files)
+  quality: 95
+
+timelapse:
+  # Interval between captures in seconds
+  interval_seconds: 30
+  
+  # Total duration to run in hours (0 = run indefinitely)
+  duration_hours: 24
+  
+  # Output directory for captured images
+  output_dir: "output/images"
+  
+  # Filename prefix for captured images
+  filename_prefix: "timelapse"
+  
+  # Image format
+  # Options: jpg, png, bmp, gif
+  image_format: "jpg"
+  
+  # Add timestamp to filename
+  add_timestamp: true
+  
+  # Create daily subdirectories
+  create_daily_dirs: true
+
+logging:
+  # Directory for log files
+  log_dir: "logs"
+  
+  # Logging level
+  # Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  log_level: "INFO"
+  
+  # CSV filename for metadata logging
+  csv_filename: "timelapse_metadata.csv"
+  
+  # Maximum log file size in MB before rotation
+  max_log_size: 10
+  
+  # Number of backup log files to keep
+  backup_count: 5
+
+system:
+  # Enable system monitoring
+  monitor_system: true
+  
+  # Check disk space interval (minutes)
+  disk_check_interval: 60
+  
+  # Minimum free disk space in GB before stopping
+  min_free_space: 1.0
+  
+  # Maximum CPU temperature before throttling (Celsius)
+  max_cpu_temp: 75
+  
+  # Enable automatic cleanup of old files
+  auto_cleanup: true
+  
+  # Keep files for this many days (0 = keep all)
+  keep_days: 7
+
+advanced:
+  # Enable preview mode (shows camera feed on screen)
+  enable_preview: false
+  
+  # Preview resolution [width, height]
+  preview_resolution: [640, 480]
+  
+  # Enable histogram in preview
+  show_histogram: false
+  
+  # Custom camera controls (advanced users only)
+  custom_controls: {}
+  
+  # Enable debug mode
+  debug_mode: false

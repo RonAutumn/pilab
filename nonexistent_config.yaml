@@ -1,0 +1,21 @@
+camera:
+  awb_mode: auto
+  exposure_mode: auto
+  iso: 100
+  quality: 95
+  resolution:
+  - 4056
+  - 3040
+  shutter_speed: 0
+logging:
+  csv_filename: timelapse_metadata.csv
+  log_dir: logs
+  log_level: INFO
+timelapse:
+  add_timestamp: true
+  create_daily_dirs: true
+  duration_hours: 24
+  filename_prefix: timelapse
+  image_format: jpg
+  interval_seconds: 30
+  output_dir: output/images
