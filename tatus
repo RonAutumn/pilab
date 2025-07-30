@@ -1,0 +1,473 @@
+[33mtag v0.1.1-hotfix[m
+Tagger: rON4242 <rijkaardalexis@yahoo.com>
+Date:   Tue Jul 29 20:56:51 2025 -0400
+
+Tier 1 stability hotfix release - Fixes invalid camera controls, CSV logging field mismatch, and implements comprehensive test suite
+
+[33mcommit 986a68f84ca9319f524fdd089a886e28d19914d3[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mfeature/tier1-stability-fixes[m[33m, [m[1;33mtag: [m[1;33mv0.1.1-hotfix[m[33m)[m
+Author: rON4242 <rijkaardalexis@yahoo.com>
+Date:   Tue Jul 29 20:55:57 2025 -0400
+
+    feat: Implement Tier 1 stability fixes and comprehensive test suite
+    
+    - Fix invalid camera control keys in capture_utils.py and preview.py
+    - Update config.yaml.example to use valid Picamera2 controls
+    - Update configuration validation to match new control approach
+    - Fix CSV logging field mismatch in metrics.py
+    - Implement comprehensive test suite for CSV logging and camera control validation
+    - Add regression tests to prevent future field mismatches and invalid controls
+    - Create comprehensive test runner script for CI/CD integration
+    - Update documentation and add comprehensive test coverage
+    - All 154 tests passing with 29 comprehensive validation tests
+    
+    This completes the Tier 1 stability fixes including:
+    - Task 18: Fix invalid camera control IDs
+    - Task 19: Fix CSV logging field mismatch
+    - Task 27: Comprehensive test suite implementation
+
+[1mdiff --git a/.gitignore b/.gitignore[m
+[1mindex e781597..6886bdf 100644[m
+[1m--- a/.gitignore[m
+[1m+++ b/.gitignore[m
+[36m@@ -195,12 +195,10 @@[m [mnode_modules/[m
+ *.sw?[m
+ # OS specific[m
+ [m
+[31m-# Task files[m
+[31m-# tasks.json[m
+[31m-# tasks/[m
+[31m-[m
+ # Taskmaster AI project management[m
+ .taskmaster/[m
+ .taskmasterconfig[m
+[31m-tasks.json[m
+[31m-tasks/ [m
+[32m+[m
+[32m+[m[32m# Task files[m
+[32m+[m[32m# tasks.json[m
+[32m+[m[32m# tasks/[m[41m [m
+[1mdiff --git a/.taskmaster/config.json b/.taskmaster/config.json[m
+[1mindex 8c325ec..020eef3 100644[m
+[1m--- a/.taskmaster/config.json[m
+[1m+++ b/.taskmaster/config.json[m
+[36m@@ -34,4 +34,4 @@[m
+     "userId": "1234567890"[m
+   },[m
+   "claudeCode": {}[m
+[31m-} [m
+\ No newline at end of file[m
+[32m+[m[32m}[m
+\ No newline at end of file[m
+[1mdiff --git a/README.md b/README.md[m
+[1mindex a142465..f837d7d 100644[m
+[1m--- a/README.md[m
+[1m+++ b/README.md[m
+[36m@@ -12,9 +12,17 @@[m [mA professional-grade timelapse photography system for Raspberry Pi 5 with HQ Cam[m
+ - **Signal Handling**: Clean shutdown on Ctrl-C and system signals[m
+ - **Resource Management**: Automatic cleanup and resource monitoring[m
+ [m
+[31m-## 📋 Hardware Requirements[m
+[32m+[m[32m## 📋 System Requirements[m
+ [m
+[31m-### Required Components[m
+[32m+[m[32m### Operating System[m
+[32m+[m[32m- **Raspberry Pi OS Bullseye** (2021-11-02) or later[m
+[32m+[m[32m- **Supported**: Both 32-bit and 64-bit versions[m
+[32m+[m[32m- **Not Supported**: Raspberry Pi OS Buster or legacy images[m
+[32m+[m[32m- **Alternative**: Ubuntu Server 20.04+ (with manual camera setup)[m
+[32m+[m
+[32m+[m[32m### Hardware Requirements[m
+[32m+[m
+[32m+[m[32m#### Required Components[m
+ - **Raspberry Pi 5** (4GB or 8GB RAM recommended)[m
+ - **Raspberry Pi HQ Camera** (12MP Sony IMX477 sensor)[m
+ - **16mm C-mount lens** (or compatible C-mount lens)[m
+[36m@@ -22,12 +30,24 @@[m [mA professional-grade timelapse photography system for Raspberry Pi 5 with HQ Cam[m
+ - **Power supply** (5V/3A minimum, 5V/4A recommended)[m
+ - **Camera cable** (included with HQ Camera)[m
+ [m
+[31m-### Optional Components[m
+[32m+[m[32m#### Optional Components[m
+ - **Tripod or mounting system** for stable positioning[m
+ - **External storage** (USB SSD for extended captures)[m
+ - **Cooling solution** (active cooling recommended for long captures)[m
+ - **Network connection** (WiFi or Ethernet for remote monitoring)[m
+ [m
+[32m+[m[32m### Camera Limitations[m
+[32m+[m
+[32m+[m[32m**Important**: This system is designed for **single-camera operation only**.[m[41m [m
+[32m+[m
+[32m+[m[32m- **Single Camera Support**: Only one camera can be reliably used at a time[m
+[32m+[m[32m- **Resource Contention**: Multiple cameras may cause dropped frames or resource conflicts[m
+[32m+[m[32m- **High Resolution**: Full 12MP capture requires dedicated camera resources[m
+[32m+[m[32m- **Frame Rate**: Higher frame rates increase resource requirements[m
+[32m+[m[32m- **Memory Usage**: Each camera instance consumes significant system memory[m
+[32m+[m
+[32m+[m[32m**Note**: If you need multi-camera support, consider running separate instances on different Raspberry Pi devices or implementing a camera switching mechanism.[m
+[32m+[m
+ ## 🚀 Installation[m
+ [m
+ ### 1. System Preparation[m
+[36m@@ -48,14 +68,16 @@[m [msudo reboot[m
+ [m
+ ### 2. Install Dependencies[m
+ [m
+[32m+[m[32m#### Method A: Virtual Environment (Recommended)[m
+[32m+[m
+ ```bash[m
+ # Install system dependencies[m
+ sudo apt install -y python3-pip python3-venv git[m
+ [m
+[31m-# Install camera libraries[m
+[32m+[m[32m# Install camera libraries (RECOMMENDED: Use apt for picamera2)[m
+ sudo apt install -y python3-picamera2 python3-libcamera[m
+ [m
+[31m-# Create virtual environment (recommended)[m
+[32m+[m[32m# Create virtual environment[m
+ python3 -m venv cinepi_env[m
+ source cinepi_env/bin/activate[m
+ [m
+[36m@@ -63,6 +85,38 @@[m [msource cinepi_env/bin/activate[m
+ pip install -r requirements.txt[m
+ ```[m
+ [m
+[32m+[m[32m#### Method B: System-Wide Installation[m
+[32m+[m
+[32m+[m[32m```bash[m
+[32m+[m[32m# Install system dependencies[m
+[32m+[m[32msudo apt install -y python3-pip git[m
+[32m+[m
+[32m+[m[32m# Install camera libraries[m
+[32m+[m[32msudo apt install -y python3-picamera2 python3-libcamera[m
+[32m+[m
+[32m+[m[32m# Install Python dependencies system-wide[m
+[32m+[m[32msudo pip3 install -r requirements.txt[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32m#### Virtual Environment vs System-Wide Installation[m
+[32m+[m
+[32m+[m[32m| Aspect | Virtual Environment | System-Wide |[m
+[32m+[m[32m|--------|-------------------|-------------|[m
+[32m+[m[32m| **Isolation** | ✅ Isolated dependencies | ❌ Affects system Python |[m
+[32m+[m[32m| **Permissions** | ✅ No sudo required for pip | ❌ Requires sudo for pip |[m
+[32m+[m[32m| **Updates** | ✅ Easy to update/rollback | ❌ May affect other applications |[m
+[32m+[m[32m| **Disk Space** | ⚠️ Uses more disk space | ✅ More efficient |[m
+[32m+[m[32m| **Complexity** | ⚠️ Requires activation | ✅ No activation needed |[m
+[32m+[m[32m| **Development** | ✅ Recommended for development | ❌ Not recommended |[m
+[32m+[m
+[32m+[m[32m**Important Notes about picamera2 Installation:**[m
+[32m+[m
+[32m+[m[32m- **Recommended**: Install picamera2 via `apt` (as shown above) for best compatibility with Raspberry Pi OS[m
+[32m+[m[32m- **Alternative**: If apt installation is not available, pip installation is supported via requirements.txt[m
+[32m+[m[32m- **Avoid mixing**: Do not install picamera2 via both apt and pip to prevent version conflicts[m
+[32m+[m[32m- **Version pinning**: The requirements.txt pins picamera2 to version 0.3.12 for consistency[m
+[32m+[m[32m- **System Libraries**: picamera2 requires system-level camera libraries that are installed via apt[m
+[32m+[m
+ ### 3. Clone and Setup[m
+ [m
+ ```bash[m
+[36m@@ -128,13 +182,33 @@[m [mpython src/main.py --verbose[m
+ # Test configuration without capturing[m
+ python src/main.py --dry-run[m
+ [m
+[32m+[m[32m# Suppress drift warnings[m
+[32m+[m[32mpython src/main.py --suppress-drift[m
+[32m+[m
+ # Use custom config file[m
+ python src/main.py --config my_config.yaml[m
+ ```[m
+ [m
+ ## 📸 Usage Examples[m
+ [m
+[31m-### Quick Start[m
+[32m+[m[32m### Quick Start (First-Time Users)[m
+[32m+[m
+[32m+[m[32m**Before your first capture:**[m
+[32m+[m[32m```bash[m
+[32m+[m[32m# 1. Activate virtual environment (if using one)[m
+[32m+[m[32msource cinepi_env/bin/activate[m
+[32m+[m
+[32m+[m[32m# 2. Test configuration without capturing[m
+[32m+[m[32mpython src/main.py --dry-run --verbose[m
+[32m+[m
+[32m+[m[32m# 3. Run a short test capture (1 minute)[m
+[32m+[m[32mpython src/main.py --interval 10 --duration 0.1[m
+[32m+[m
+[32m+[m[32m# 4. Start your first timelapse[m
+[32m+[m[32mpython src/main.py --interval 30 --duration 2[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32m### Basic Usage[m
+ ```bash[m
+ # Start a 24-hour timelapse with 30-second intervals[m
+ python src/main.py[m
+[36m@@ -144,6 +218,9 @@[m [mpython src/main.py --interval 60 --duration 2[m
+ [m
+ # Test configuration without capturing images[m
+ python src/main.py --dry-run --verbose[m
+[32m+[m
+[32m+[m[32m# Use custom configuration file[m
+[32m+[m[32mpython src/main.py --config my_config.yaml[m
+ ```[m
+ [m
+ ### Advanced Usage[m
+[36m@@ -156,11 +233,69 @@[m [mpython src/main.py --interval 300 --duration 0[m
+ [m
+ # Custom output location[m
+ python src/main.py --output-dir /mnt/ssd/timelapse --interval 60[m
+[32m+[m
+[32m+[m[32m# Suppress drift warnings for systems with frequent NTP[m
+[32m+[m[32mpython src/main.py --suppress-drift --interval 60[m
+[32m+[m
+[32m+[m[32m# High-quality capture with custom settings[m
+[32m+[m[32mpython src/main.py --interval 30 --duration 4 --verbose[m
+ ```[m
+ [m
+[31m-### Background Operation[m
+[32m+[m[32m### Production Usage (Recommended)[m
+[32m+[m
+[32m+[m[32mFor long-term or production use, use the launch scripts:[m
+[32m+[m
+[32m+[m[32m```bash[m
+[32m+[m[32m# Start timelapse capture with mutual exclusion[m
+[32m+[m[32m./run_capture.sh --interval 60 --duration 8[m
+[32m+[m
+[32m+[m[32m# Start with custom output directory[m
+[32m+[m[32m./run_capture.sh --output-dir /mnt/external/timelapse --interval 30[m
+[32m+[m
+[32m+[m[32m# Start live preview (for monitoring)[m
+[32m+[m[32m./run_preview.sh --port 8080 --resolution 1280 720[m
+[32m+[m
+[32m+[m[32m# Check status of running processes[m
+[32m+[m[32m./run_capture.sh --status[m
+[32m+[m[32m./run_preview.sh --status[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32m### Background Operation (Recommended)[m
+[32m+[m
+[32m+[m[32mThe project includes a background launch wrapper that fixes common nohup directory issues:[m
+[32m+[m
+ ```bash[m
+[31m-# Run in background with nohup[m
+[32m+[m[32m# Start background timelapse capture (automatically sets correct working directory)[m
+[32m+[m[32m./run_all.sh --interval 60 --duration 8[m
+[32m+[m
+[32m+[m[32m# Check status of background process[m
+[32m+[m[32m./run_all.sh --status[m
+[32m+[m
+[32m+[m[32m# Stop background process gracefully[m
+[32m+[m[32m./run_all.sh --stop[m
+[32m+[m
+[32m+[m[32m# Monitor progress in real-time[m
+[32m+[m[32mtail -f timelapse.log[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32m#### Why Use run_all.sh?[m
+[32m+[m
+[32m+[m[32mThe `run_all.sh` wrapper fixes the common "python3: can't open file" error that occurs when nohup is executed from the wrong directory. It automatically:[m
+[32m+[m
+[32m+[m[32m- **Sets Working Directory**: Changes to the script's location before launching[m
+[32m+[m[32m- **Manages Process**: Tracks PID and provides status/stop commands[m
+[32m+[m[32m- **Handles Logging**: Directs output to `timelapse.log`[m
+[32m+[m[32m- **Prevents Conflicts**: Ensures only one background process runs at a time[m
+[32m+[m
+[32m+[m[32m#### Alternative: Manual nohup (Not Recommended)[m
+[32m+[m
+[32m+[m[32mIf you must use nohup directly, ensure you're in the correct directory:[m
+[32m+[m
+[32m+[m[32m```bash[m
+[32m+[m[32m# Change to project directory first[m
+[32m+[m[32mcd /path/to/cinepi[m
+[32m+[m
+[32m+[m[32m# Then run nohup[m
+ nohup python src/main.py --interval 60 --duration 8 > timelapse.log 2>&1 &[m
+ [m
+ # Check status[m
+[36m@@ -170,6 +305,49 @@[m [mtail -f timelapse.log[m
+ pkill -f "python src/main.py"[m
+ ```[m
+ [m
+[32m+[m[32m**Warning**: Manual nohup may fail with "python3: can't open file" if executed from the wrong directory.[m
+[32m+[m
+[32m+[m[32m### Using Launch Scripts (Recommended)[m
+[32m+[m
+[32m+[m[32mThe project includes two launch scripts that ensure mutual exclusion between capture and preview processes:[m
+[32m+[m
+[32m+[m[32m#### Timelapse Capture[m
+[32m+[m[32m```bash[m
+[32m+[m[32m# Start timelapse capture with mutual exclusion[m
+[32m+[m[32m./run_capture.sh --interval 60 --duration 2[m
+[32m+[m
+[32m+[m[32m# Custom output directory[m
+[32m+[m[32m./run_capture.sh --output-dir /mnt/external/timelapse --interval 30[m
+[32m+[m
+[32m+[m[32m# Test configuration[m
+[32m+[m[32m./run_capture.sh --dry-run --verbose[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32m#### Live Preview[m
+[32m+[m[32m```bash[m
+[32m+[m[32m# Start live preview with mutual exclusion[m
+[32m+[m[32m./run_preview.sh --port 8080 --resolution 1280 720[m
+[32m+[m
+[32m+[m[32m# High-quality preview[m
+[32m+[m[32m./run_preview.sh --fps 30 --quality 90[m
+[32m+[m
+[32m+[m[32m# Custom configuration[m
+[32m+[m[32m./run_preview.sh --config my_config.yaml --verbose[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32m#### Mutual Exclusion Benefits[m
+[32m+[m[32m- **Prevents Resource Contention**: Only one camera process can run at a time[m
+[32m+[m[32m- **Automatic Lock Management**: Lock files are created and cleaned up automatically[m
+[32m+[m[32m- **Stale Lock Detection**: Automatically detects and removes orphaned lock files[m
+[32m+[m[32m- **Graceful Shutdown**: Proper cleanup on Ctrl-C or system signals[m
+[32m+[m[32m- **Clear Error Messages**: Informative messages when camera is already in use[m
+[32m+[m
+[32m+[m[32m#### Lock File Management[m
+[32m+[m[32m- **Location**: `/tmp/cinepi_camera.lock`[m
+[32m+[m[32m- **Automatic Cleanup**: Removed when process exits normally[m
+[32m+[m[32m- **Manual Cleanup**: If needed, remove manually: `rm /tmp/cinepi_camera.lock`[m
+[32m+[m[32m- **Timeout**: 5-second wait for lock acquisition[m
+[32m+[m
+ ## 📊 Output and Logging[m
+ [m
+ ### Image Files[m
+[36m@@ -182,14 +360,303 @@[m [mpkill -f "python src/main.py"[m
+ - **Metadata CSV**: `logs/timelapse_metadata.csv`[m
+ - **Console Output**: Real-time progress and status[m
+ [m
+[32m+[m[32m### Log Handling and Management[m
+[32m+[m
+[32m+[m[32m#### Log Directory Structure[m
+[32m+[m[32mThe `logs/` directory is automatically created during installation and contains:[m
+[32m+[m
+[32m+[m[32m```[m
+[32m+[m[32mlogs/[m
+[32m+[m[32m├── cinepi.log              # Main application log[m
+[32m+[m[32m├── timelapse_YYYYMMDD.csv  # Daily metadata logs[m
+[32m+[m[32m├── preview.log             # Live preview server log (if used)[m
+[32m+[m[32m└── error.log              # Error-specific log (if enabled)[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32m#### Log File Purposes[m
+[32m+[m
+[32m+[m[32m**Application Log (`cinepi.log`)**[m
+[32m+[m[32m- **Content**: System startup, camera initialization, capture events, errors, warnings[m
+[32m+[m[32m- **Rotation**: Automatic rotation when file size exceeds 10MB[m
+[32m+[m[32m- **Retention**: Keeps last 5 log files (cinepi.log.1, cinepi.log.2, etc.)[m
+[32m+[m[32m- **Format**: Standard Python logging format with timestamps[m
+[32m+[m
+[32m+[m[32m**Metadata CSV (`timelapse_YYYYMMDD.csv`)**[m
+[32m+[m[32m- **Content**: Per-capture metadata including quality metrics[m
+[32m+[m[32m- **Structure**: CSV format with headers for easy analysis[m
+[32m+[m[32m- **Daily Files**: New file created each day for organization[m
+[32m+[m[32m- **Integrity**: Protected against corruption during writes[m
+[32m+[m
+[32m+[m[32m#### Log Permissions and Access[m
+[32m+[m
+[32m+[m[32m```bash[m
+[32m+[m[32m# Check log directory permissions[m
+[32m+[m[32mls -la logs/[m
+[32m+[m
+[32m+[m[32m# Expected permissions: drwxrwxr-x (775)[m
+[32m+[m[32m# Owner: Your user[m
+[32m+[m[32m# Group: Your user group[m
+[32m+[m
+[32m+[m[32m# If permissions are incorrect, fix them:[m
+[32m+[m[32mchmod 775 logs/[m
+[32m+[m[32mchown $USER:$USER logs/[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32m#### Log Monitoring and Analysis[m
+[32m+[m
+[32m+[m[32m```bash[m
+[32m+[m[32m# Monitor logs in real-time[m
+[32m+[m[32mtail -f logs/cinepi.log[m
+[32m+[m
+[32m+[m[32m# Search for errors[m
+[32m+[m[32mgrep ERROR logs/cinepi.log[m
+[32m+[m
+[32m+[m[32m# Check recent captures[m
+[32m+[m[32mtail -20 logs/timelapse_$(date +%Y%m%d).csv[m
+[32m+[m
+[32m+[m[32m# Analyze log file sizes[m
+[32m+[m[32mdu -h logs/*[m
+[32m+[m
+[32m+[m[32m# Check for log rotation[m
+[32m+[m[32mls -la logs/cinepi.log*[m
+[32m+[m[32m```[m
+[32m+[m
+[32m+[m[32m#### Log Troubleshooting[m
+[32m+[m
+[32m+[m[32m**Common Log Issues:**[m
+[32m+[m
+[32m+[m[32m1. **Permission Denied**[m
+[32m+[m[32m   ```bash[m
+[32m+[m[32m   # Fix log directory permissions[m
+[32m+[m[32m   sudo chown $USER:$USER logs/[m
+[32m+[m[32m   chmod 775 logs/[m
+[32m+[m[32m   ```[m
+[32m+[m
+[32m+[m[32m2. **Disk Space Full**[m
+[32m+[m[32m   ```bash[m
+[32m+[m[32m   # Check available space[m
+[32m+[m[32m   df -h[m
+[32m+[m[41m   [m
+[32m+[m[32m   # Clean old log files[m
+[32m+[m[32m   find logs/ -name "*.log.*" -mtime +7 -delete[m
+[32m+[m[32m   ```[m
+[32m+[m
+[32m+[m[32m3. **Log File Corruption**[m
+[32m+[m[32m   ```bash[m
+[32m+[m[32m   # Backup and recreate log file[m
+[32m+[m[32m   mv logs/cinepi.log logs/cinepi.log.corrupted[m
+[32m+[m[32m   touch logs/cinepi.log[m
+[32m+[m[32m   chmod 664 logs/cinepi.log[m
+[32m+[m[32m   ```[m
+[32m+[m
+[32m+[m[32m4. **Missing Log Directory**[m
+[32m+[m[32m   ```bash[m
+[32m+[m[32m   # Recreate logs directory[m
+[32m+[m[32m   mkdir -p logs[m
+[32m+[m[32m   chmod 775 logs[m
+[32m+[m[32m   chown $USER:$USER logs[m
+[32m+[m[32m   ```[m
+[32m+[m
+ ### CSV Metadata Structure[m
+ ```csv[m
+ timestamp,filename,filepath,capture_number,interval_seconds,sharpness_score,brightness_value,file_size[m
+ 2024-01-01T12:00:00,timelapse_20240101_120000_000001.jpg,output/images/2024-01-01/timelapse_20240101_120000_000001.jpg,1,30,125.5,128.3,2048576[m
+ ```[m
+ [m
+[32m+[m[32m## ⏱️ Timing Accuracy and System Clock Behavior[m
+[32m+[m
+[32m+[m[32m### Understanding NTP and Kernel Slewing[m
+[32m+[m
+[32m+[m[32mThe CinePi system uses high-precision timing to maintain accurate capture intervals. However, system clock adjustments from NTP (Network Time Protocol) or kernel slewing can affect timing accuracy:[m
+[32m+[m
+[32m+[m[32m#### What Causes System Clock Adjustments?[m
+[32m+[m
+[32m+[m[32m1. **NTP Synchronization**: Network time servers periodically adjust the system clock to maintain accuracy[m
+[32m+[m[32m2. **Kernel Slewing**: The Linux kernel gradually adjusts the clock to correct drift without sudden jumps[m
+[32m+[m[32m3. **Manual Time Changes**: System administrators or other processes may modify the system time[m
+[32m+[m
+[32m+[m[32m#### How CinePi Handles Clock Adjustments[m
+[32m+[m
+[32m+[m[32mThe timing controller automatically detects system clock adjustments and responds appropriately:[m
+[32m+[m
+[32m+[m[32m- **Detection**: Monitors for clock jumps greater than 1 second[m
+[32m+[m[32m- **Drift Reset**: Automatically resets accumulated drift when adjustments are detected[m
+[32m+[m[32m- **Warning System**: Logs clock adjustments with configurable verbosity[m
+[32m+[m[32m- **Timing Recovery**: Maintains accurate intervals despite system clock changes[m
+[32m+[m
+[32m+[m[32m#### Warning Suppression Options[m
+[32m+[m
+[32m+[m[32mFor systems with frequent NTP adjustments, you can control warning verbosity:[m
+[32m+[m
+[32m+[m[32m```bash[m
+[32m+[m[32m# Default behavior: First 3 warnings at WARNING level, then INFO level[m
+[32m+[m[32mpython src/main.py --interval 60[m
+[32m+[m
+[32m+[m[32m# Suppress all drift warnings (useful for systems with frequent NTP sync)[m
+[32m+[m[3
