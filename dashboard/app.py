@@ -8,10 +8,15 @@ the CinePi dashboard application with proper configuration and extensions.
 from flask import Flask
 from flask_socketio import SocketIO
 from pathlib import Path
+from logging.handlers import RotatingFileHandler
+import logging
+import os
 
 from dashboard.extensions import init_extensions
 from dashboard.routes import init_routes
 from dashboard.services import init_services
+# Ensure websocket handlers (including /ws namespace) are registered
+import dashboard.routes.websocket  # noqa: F401
 
 
 def create_app(config_name='development'):
@@ -43,6 +48,9 @@ def create_app(config_name='development'):
     
     # Register error handlers
     register_error_handlers(app)
+
+    # Setup rotating file logging (logs/dashboard.log)
+    setup_logging(app)
     
     return app
 
@@ -57,6 +65,32 @@ def register_error_handlers(app):
     @app.errorhandler(500)
     def internal_error(error):
         return {'error': 'Internal server error'}, 500
+
+
+def setup_logging(app):
+    """Configure rotating file logging at logs/dashboard.log"""
+    try:
+        logs_dir = Path('logs')
+        logs_dir.mkdir(exist_ok=True)
+        log_path = logs_dir / 'dashboard.log'
+
+        handler = RotatingFileHandler(str(log_path), maxBytes=2 * 1024 * 1024, backupCount=5)
+        formatter = logging.Formatter(
+            '%(asctime)s [%(levelname)s] %(name)s - %(message)s'
+        )
+        handler.setFormatter(formatter)
+        handler.setLevel(logging.INFO)
+
+        root_logger = logging.getLogger()
+        # Avoid duplicate handlers if reloaded
+        if not any(isinstance(h, RotatingFileHandler) and getattr(h, 'baseFilename', '') == str(log_path) for h in root_logger.handlers):
+            root_logger.addHandler(handler)
+
+        app.logger.addHandler(handler)
+        app.logger.setLevel(logging.INFO)
+        app.logger.info('Logging initialized. Writing to %s', log_path)
+    except Exception as e:
+        print(f'Failed to configure logging: {e}')
 
 
 def create_socketio_app(app):
@@ -94,4 +128,4 @@ if __name__ == '__main__':
         port=5000,
         debug=True,
         use_reloader=True
-    ) 
+    )

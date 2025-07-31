@@ -661,8 +661,8 @@ class CinePiDashboard {
                 return;
             }
 
-            // Connect to the same origin; server runs SocketIO via dashboard/app.py
-            this.ws = ioClient({
+            // Connect to the dedicated namespace '/ws' to match backend
+            this.ws = ioClient('/ws', {
                 transports: ['websocket', 'polling'],
                 path: '/socket.io',
                 autoConnect: true,

@@ -11,6 +11,17 @@ from pathlib import Path
 from datetime import datetime
 from flask import Response
 import cv2
+import logging
+
+# Prefer shared src module if available
+try:
+    from src.capture_utils import CameraManager  # Provides camera init and frame pipeline
+except Exception as _import_err:
+    CameraManager = None
+    logging.getLogger(__name__).warning(
+        "CameraManager not available from src.capture_utils: %s. Falling back to OpenCV device 0.",
+        _import_err
+    )
 
 
 class CameraService:
@@ -19,6 +30,14 @@ class CameraService:
     def __init__(self):
         self.config_path = Path('/opt/cinepi/config/cinepi.yaml')
         self.captures_path = Path('/opt/cinepi/captures')
+        # Initialize camera backend
+        self.camera_manager = None
+        if CameraManager:
+            try:
+                self.camera_manager = CameraManager()
+            except Exception as e:
+                logging.getLogger(__name__).exception("Failed to initialize CameraManager: %s", e)
+                self.camera_manager = None
     
     def get_status(self):
         """
@@ -28,28 +47,48 @@ class CameraService:
             dict: Camera status information
         """
         try:
-            # Integration with existing CinePi camera module
-            result = subprocess.run(
-                ['python3', '-m', 'cinepi.camera', 'status'], 
-                capture_output=True, 
-                text=True,
-                timeout=10
-            )
-            
-            if result.returncode == 0:
+            # Prefer direct manager if available, otherwise fall back to legacy subprocess
+            if self.camera_manager and hasattr(self.camera_manager, "status"):
                 try:
-                    return json.loads(result.stdout)
-                except json.JSONDecodeError:
+                    status = self.camera_manager.status()
+                    # Normalize minimal fields
                     return {
-                        'status': 'connected',
-                        'connected': True,
-                        'message': result.stdout.strip()
+                        'status': status.get('status', 'connected'),
+                        'connected': bool(status.get('connected', True)),
+                        **{k: v for k, v in status.items() if k not in ('status', 'connected')}
                     }
-            else:
+                except Exception as e:
+                    logging.getLogger(__name__).exception("CameraManager.status() failed: %s", e)
+            
+            # Legacy fallback via cinepi CLI if available
+            try:
+                result = subprocess.run(
+                    ['python3', '-m', 'cinepi.camera', 'status'], 
+                    capture_output=True, 
+                    text=True,
+                    timeout=10
+                )
+                if result.returncode == 0:
+                    try:
+                        return json.loads(result.stdout)
+                    except json.JSONDecodeError:
+                        return {
+                            'status': 'connected',
+                            'connected': True,
+                            'message': result.stdout.strip()
+                        }
+                else:
+                    return {
+                        'error': result.stderr or 'Camera status check failed',
+                        'status': 'unknown',
+                        'connected': False
+                    }
+            except FileNotFoundError:
+                # Neither CameraManager nor cinepi CLI is available
                 return {
-                    'error': result.stderr or 'Camera status check failed',
-                    'status': 'unknown',
-                    'connected': False
+                    'status': 'disconnected',
+                    'connected': False,
+                    'error': 'cinepi.camera module not found and CameraManager unavailable'
                 }
                 
         except subprocess.TimeoutExpired:
@@ -174,26 +213,36 @@ class CameraService:
         try:
             def generate_frames():
                 """Generate MJPEG frames"""
-                # Use existing CinePi camera stream or fallback to OpenCV
+                # Prefer CameraManager pipeline if available
+                if self.camera_manager and hasattr(self.camera_manager, "frames"):
+                    try:
+                        for frame in self.camera_manager.frames():
+                            try:
+                                ret, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
+                                if not ret:
+                                    continue
+                                yield (b'--frame\r\n'
+                                       b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+                            except Exception as enc_err:
+                                logging.getLogger(__name__).warning("JPEG encode failed: %s", enc_err)
+                    except Exception as e:
+                        logging.getLogger(__name__).exception("CameraManager.frames() failed: %s", e)
+                        # fall through to OpenCV
+                # Fallback to OpenCV device 0
                 try:
-                    # Try to use CinePi camera stream
-                    cap = cv2.VideoCapture(0)  # Or CinePi camera instance
-                    
+                    cap = cv2.VideoCapture(0)
                     while True:
                         ret, frame = cap.read()
                         if not ret:
                             break
-                        
-                        # Convert frame to JPEG
                         ret, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 80])
                         if not ret:
                             continue
-                        
                         yield (b'--frame\r\n'
                                b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
-                               
                 except Exception as e:
-                    # Fallback: return a placeholder image or error
+                    logging.getLogger(__name__).warning("OpenCV fallback failed: %s", e)
+                    # Minimal boundary to keep stream alive even on failure
                     yield (b'--frame\r\n'
                            b'Content-Type: image/jpeg\r\n\r\n' + b'\r\n')
             
@@ -218,21 +267,25 @@ class CameraService:
         """
         try:
             # Query camera for supported parameters
+            # Prefer CameraManager query if available
+            if self.camera_manager and hasattr(self.camera_manager, "supported_parameters"):
+                try:
+                    return self.camera_manager.supported_parameters()
+                except Exception as e:
+                    logging.getLogger(__name__).warning("CameraManager.supported_parameters failed: %s", e)
+            # Legacy fallback via cinepi CLI
             result = subprocess.run(
                 ['python3', '-m', 'cinepi.camera', 'parameters'],
                 capture_output=True,
                 text=True,
                 timeout=10
             )
-            
             if result.returncode == 0:
                 try:
                     return json.loads(result.stdout)
                 except json.JSONDecodeError:
-                    # Fallback to default parameters
                     return self._get_default_parameters()
             else:
-                # Fallback to default parameters
                 return self._get_default_parameters()
                 
         except Exception as e:
@@ -363,4 +416,4 @@ class CameraService:
             return {
                 'success': False,
                 'error': f'Error applying camera settings: {e}'
-            } 
+            }

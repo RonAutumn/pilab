@@ -3,6 +3,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Local logs
+logs/
+!.gitkeep
+
 # C extensions
 *.so
 
@@ -201,4 +205,4 @@ node_modules/
 
 # Task files
 # tasks.json
-# tasks/ 
+# tasks/

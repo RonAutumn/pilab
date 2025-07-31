@@ -1,5 +1,14 @@
 # CinePi Dashboard
 
+## Devtools and Favicon
+This project expects a favicon and a Chrome DevTools placeholder to avoid 404 noise during development.
+
+- Favicon path: `dashboard/static/favicon.ico`
+- Devtools JSON path: `dashboard/.well-known/appspecific/com.chrome.devtools.json`
+
+Both files are created automatically as empty placeholders during setup, but you can replace them with real content anytime.
+
+
 A modern, responsive web dashboard for controlling CinePi timelapse camera systems. Built with Flask, featuring real-time updates, comprehensive camera controls, and a beautiful user interface.
 
 ## 🚀 Features
@@ -333,4 +342,4 @@ For support and questions:
 
 ---
 
-*CinePi Dashboard v1.0.0 - Professional timelapse camera control system* 
+*CinePi Dashboard v1.0.0 - Professional timelapse camera control system*

@@ -13,7 +13,7 @@ from dashboard.services.websocket_service import WebSocketService
 websocket_bp = Blueprint('websocket', __name__)
 
 
-@socketio.on('connect')
+@socketio.on('connect', namespace='/ws')
 def handle_connect():
     """
     Handle client connection to WebSocket
@@ -28,7 +28,7 @@ def handle_connect():
     })
 
 
-@socketio.on('disconnect')
+@socketio.on('disconnect', namespace='/ws')
 def handle_disconnect():
     """
     Handle client disconnection from WebSocket
@@ -36,7 +36,7 @@ def handle_disconnect():
     print(f'Client disconnected: {request.sid}')
 
 
-@socketio.on('join_dashboard')
+@socketio.on('join_dashboard', namespace='/ws')
 def handle_join_dashboard():
     """
     Join dashboard room for real-time updates
@@ -54,7 +54,7 @@ def handle_join_dashboard():
     emit('status_update', status)
 
 
-@socketio.on('leave_dashboard')
+@socketio.on('leave_dashboard', namespace='/ws')
 def handle_leave_dashboard():
     """
     Leave dashboard room
@@ -63,7 +63,7 @@ def handle_leave_dashboard():
     emit('left', {'room': 'dashboard'})
 
 
-@socketio.on('request_status')
+@socketio.on('request_status', namespace='/ws')
 def handle_status_request():
     """
     Handle status request from client
@@ -76,7 +76,7 @@ def handle_status_request():
     emit('status_update', status)
 
 
-@socketio.on('request_logs')
+@socketio.on('request_logs', namespace='/ws')
 def handle_logs_request():
     """
     Handle logs request from client
@@ -89,7 +89,7 @@ def handle_logs_request():
     emit('log_entries', logs)
 
 
-@socketio.on('capture_started')
+@socketio.on('capture_started', namespace='/ws')
 def handle_capture_started(data):
     """
     Handle capture started event
@@ -108,7 +108,7 @@ def handle_capture_started(data):
     }, room='dashboard')
 
 
-@socketio.on('capture_stopped')
+@socketio.on('capture_stopped', namespace='/ws')
 def handle_capture_stopped(data):
     """
     Handle capture stopped event
@@ -126,7 +126,7 @@ def handle_capture_stopped(data):
     }, room='dashboard')
 
 
-@socketio.on('capture_taken')
+@socketio.on('capture_taken', namespace='/ws')
 def handle_capture_taken(data):
     """
     Handle capture taken event
@@ -146,7 +146,7 @@ def handle_capture_taken(data):
     }, room='dashboard')
 
 
-@socketio.on('settings_updated')
+@socketio.on('settings_updated', namespace='/ws')
 def handle_settings_updated(data):
     """
     Handle settings updated event
@@ -164,7 +164,7 @@ def handle_settings_updated(data):
     }, room='dashboard')
 
 
-@socketio.on('error_occurred')
+@socketio.on('error_occurred', namespace='/ws')
 def handle_error_occurred(data):
     """
     Handle error occurred event
@@ -180,4 +180,4 @@ def handle_error_occurred(data):
         'error': data.get('error'),
         'timestamp': data.get('timestamp'),
         'severity': data.get('severity', 'error')
-    }, room='dashboard') 
+    }, room='dashboard')
