@@ -18,7 +18,11 @@ except ImportError:
     Picamera2 = None
     controls = None
 
-from .config_manager import ConfigManager
+try:
+    from .config_manager import ConfigManager  # package-relative when run as module
+except (ImportError, SystemError, ValueError):
+    # Fallback when executed without package context (e.g., python src/capture_utils.py)
+    from src.config_manager import ConfigManager
 
 logger = logging.getLogger(__name__)
 

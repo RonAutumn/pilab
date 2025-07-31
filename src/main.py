@@ -18,10 +18,22 @@ from collections import deque
 # Add src directory to Python path for imports
 sys.path.insert(0, str(Path(__file__).parent))
 
-from config_manager import ConfigManager
-from metrics import MetricsLogger, ImageQualityMetrics
-from capture_utils import CameraManager
-from timing_controller import TimingController
+try:
+    from .config_manager import ConfigManager
+except (ImportError, SystemError, ValueError):
+    from src.config_manager import ConfigManager
+try:
+    from .metrics import MetricsLogger, ImageQualityMetrics
+except (ImportError, SystemError, ValueError):
+    from src.metrics import MetricsLogger, ImageQualityMetrics
+try:
+    from .capture_utils import CameraManager
+except (ImportError, SystemError, ValueError):
+    from src.capture_utils import CameraManager
+try:
+    from .timing_controller import TimingController
+except (ImportError, SystemError, ValueError):
+    from src.timing_controller import TimingController
 
 # Global variables for graceful shutdown
 shutdown_requested = False

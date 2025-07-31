@@ -11,7 +11,11 @@ from pathlib import Path
 # Add the src directory to Python path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from main import main
+try:
+    from src.main import main
+except (ImportError, SystemError, ValueError):
+    # If executed from within src/ or path not set, attempt relative import
+    from .src.main import main  # type: ignore
 
 if __name__ == "__main__":
     try:
