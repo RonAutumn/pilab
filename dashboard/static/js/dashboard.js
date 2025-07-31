@@ -650,45 +650,71 @@ class CinePiDashboard {
 
     // WebSocket Methods
     connectWebSocket() {
+        // Use Socket.IO client if available; otherwise disable WS gracefully
         try {
-            this.ws = new WebSocket(`ws://${window.location.host}/ws`);
-            
-            this.ws.onopen = () => {
-                console.log('WebSocket connected');
+            // prefer same-origin protocol upgrade for socket.io
+            const ioClient = window.io || window.io?.default || null;
+            if (!ioClient) {
+                console.warn('Socket.IO client not found. Real-time updates will fall back to polling.');
+                this.isConnected = false;
+                this.updateConnectionStatus();
+                return;
+            }
+
+            // Connect to the same origin; server runs SocketIO via dashboard/app.py
+            this.ws = ioClient({
+                transports: ['websocket', 'polling'],
+                path: '/socket.io',
+                autoConnect: true,
+                withCredentials: true
+            });
+
+            this.ws.on('connect', () => {
+                console.log('Socket.IO connected');
                 this.isConnected = true;
                 this.updateConnectionStatus();
-                
-                // Join dashboard room
-                this.ws.send(JSON.stringify({
-                    event: 'join_dashboard'
-                }));
-            };
+                // Join dashboard room via server event name
+                this.ws.emit('join_dashboard');
+            });
 
-            this.ws.onmessage = (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    this.handleWebSocketMessage(data);
-                } catch (error) {
-                    console.error('Error parsing WebSocket message:', error);
-                }
-            };
-
-            this.ws.onclose = () => {
-                console.log('WebSocket disconnected');
+            this.ws.on('disconnect', () => {
+                console.log('Socket.IO disconnected');
                 this.isConnected = false;
                 this.updateConnectionStatus();
-                
-                // Reconnect after 5 seconds
-                setTimeout(() => this.connectWebSocket(), 5000);
-            };
+            });
 
-            this.ws.onerror = (error) => {
-                console.error('WebSocket error:', error);
+            this.ws.on('connect_error', (err) => {
+                console.error('Socket.IO connect error:', err?.message || err);
                 this.isConnected = false;
                 this.updateConnectionStatus();
-            };
+            });
+
+            // Map server-emitted events to existing handlers
+            this.ws.on('status_update', (payload) => {
+                this.updateStatusDisplay(payload);
+            });
+
+            this.ws.on('capture_update', (payload) => {
+                this.handleCaptureEvent(payload);
+            });
+
+            this.ws.on('settings_update', (payload) => {
+                this.updateSettingsDisplay(payload);
+            });
+
+            this.ws.on('error_update', (payload) => {
+                const msg = payload?.error || 'Unknown error';
+                this.showNotification(msg, 'error');
+            });
+
+            // Optional: initial status pull after connect
+            this.ws.on('status', () => {
+                this.ws.emit('request_status');
+            });
         } catch (error) {
-            console.error('Error connecting to WebSocket:', error);
+            console.error('Error initializing Socket.IO:', error);
+            this.isConnected = false;
+            this.updateConnectionStatus();
         }
     }
 
@@ -984,4 +1010,4 @@ window.addEventListener('beforeunload', () => {
 });
 
 // Export for global access
-window.CinePiDashboard = CinePiDashboard; 
+window.CinePiDashboard = CinePiDashboard;
