@@ -5,6 +5,7 @@ This module contains REST API endpoints for camera control and configuration.
 """
 
 from flask import Blueprint, request, jsonify, current_app
+from werkzeug.exceptions import BadRequest
 from dashboard.services.capture_service import CaptureService
 from dashboard.services.camera_service import CameraService
 from dashboard.services.config_service import ConfigService
@@ -14,6 +15,22 @@ from datetime import datetime
 
 # Create API blueprint
 api_bp = Blueprint('api', __name__)
+
+
+def validate_json_request():
+    """
+    Validate that the request contains valid JSON
+    Returns the parsed JSON data or raises appropriate error
+    """
+    if not request.is_json:
+        raise BadRequest("Content-Type must be application/json")
+    
+    try:
+        return request.get_json()
+    except BadRequest:
+        raise BadRequest("Invalid JSON format")
+    except Exception as e:
+        raise BadRequest(f"JSON parsing error: {str(e)}")
 
 
 @api_bp.route('/capture/start', methods=['POST'])
@@ -30,7 +47,7 @@ def start_capture():
         dict: JSON response with operation result
     """
     try:
-        data = request.get_json() or {}
+        data = validate_json_request() or {}
         interval = data.get('interval', current_app.config['DEFAULT_INTERVAL'])
         
         # Validate interval
@@ -45,6 +62,8 @@ def start_capture():
         
         return jsonify(result)
         
+    except BadRequest as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         current_app.logger.error(f"Error starting capture: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -164,7 +183,7 @@ def update_interval():
         dict: JSON response with operation result
     """
     try:
-        data = request.get_json()
+        data = validate_json_request()
         if not data or 'interval' not in data:
             return jsonify({
                 'success': False,
@@ -185,6 +204,8 @@ def update_interval():
         
         return jsonify(result)
         
+    except BadRequest as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         current_app.logger.error(f"Error updating interval: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -264,7 +285,7 @@ def update_camera_settings():
         dict: JSON response with operation result
     """
     try:
-        data = request.get_json()
+        data = validate_json_request()
         if not data:
             return jsonify({'success': False, 'error': 'No data provided'}), 400
         
@@ -281,6 +302,8 @@ def update_camera_settings():
         
         return jsonify(result)
         
+    except BadRequest as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         current_app.logger.error(f"Error updating camera settings: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -409,7 +432,7 @@ def update_config():
         dict: JSON response with operation result
     """
     try:
-        data = request.get_json()
+        data = validate_json_request()
         if not data:
             return jsonify({'success': False, 'error': 'No configuration data provided'}), 400
         
@@ -418,6 +441,8 @@ def update_config():
         
         return jsonify(result)
         
+    except BadRequest as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         current_app.logger.error(f"Error updating config: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -456,7 +481,7 @@ def restore_backup():
         dict: JSON response with restore result
     """
     try:
-        data = request.get_json()
+        data = validate_json_request()
         if not data or 'backup_file' not in data:
             return jsonify({'success': False, 'error': 'Backup file not specified'}), 400
         
@@ -465,6 +490,8 @@ def restore_backup():
         
         return jsonify(result)
         
+    except BadRequest as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
     except Exception as e:
         current_app.logger.error(f"Error restoring backup: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500 
