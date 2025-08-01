@@ -14,6 +14,9 @@ import signal
 import threading
 from pathlib import Path
 
+# Add the current directory to Python path for dashboard imports
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 def check_dependencies():
     """Check if required files exist"""
     required_files = [
@@ -34,47 +37,71 @@ def check_dependencies():
     
     return True
 
+def find_python_executable():
+    """Find the appropriate Python executable"""
+    # Check if we're in a virtual environment
+    if hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
+        return sys.executable
+    
+    # Check for common virtual environment locations
+    venv_paths = ['.venv', 'venv', 'env']
+    for venv_path in venv_paths:
+        if os.path.exists(venv_path):
+            python_path = os.path.join(venv_path, 'bin', 'python')
+            if os.path.exists(python_path):
+                return python_path
+    
+    # Fall back to system Python
+    return 'python3'
+
 def start_web_preview_server():
     """Start the web preview server"""
     print("🚀 Starting Web Preview Server...")
     
+    python_exe = find_python_executable()
+    cmd = [python_exe, 'web_preview.py']
+    
     try:
-        # Activate virtual environment if it exists
-        venv_python = '.venv/bin/python' if os.path.exists('.venv/bin/python') else 'python'
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
         
-        process = subprocess.Popen([
-            venv_python, 'web_preview.py'
-        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        
-        # Wait for server to start
-        time.sleep(3)
+        # Wait a moment to see if it starts successfully
+        time.sleep(2)
         
         if process.poll() is None:
             print("✅ Web Preview Server started on port 8080")
             return process
         else:
             stdout, stderr = process.communicate()
-            print(f"❌ Web Preview Server failed to start:")
-            print(f"   STDOUT: {stdout.decode()}")
-            print(f"   STDERR: {stderr.decode()}")
+            print("❌ Web Preview Server failed to start:")
+            print(f"   STDOUT: {stdout}")
+            print(f"   STDERR: {stderr}")
             return None
+            
     except Exception as e:
-        print(f"❌ Error starting Web Preview Server: {e}")
+        print(f"❌ Failed to start Web Preview Server: {e}")
         return None
 
 def start_dashboard():
-    """Start the main dashboard"""
+    """Start the CinePi dashboard"""
     print("🚀 Starting CinePi Dashboard...")
     
+    python_exe = find_python_executable()
+    cmd = [python_exe, 'dashboard/app.py']
+    
     try:
-        # Activate virtual environment if it exists
-        venv_python = '.venv/bin/python' if os.path.exists('.venv/bin/python') else 'python'
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
         
-        process = subprocess.Popen([
-            venv_python, 'dashboard/app.py'
-        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        
-        # Wait for server to start
+        # Wait a moment to see if it starts successfully
         time.sleep(3)
         
         if process.poll() is None:
@@ -82,44 +109,47 @@ def start_dashboard():
             return process
         else:
             stdout, stderr = process.communicate()
-            print(f"❌ Dashboard failed to start:")
-            print(f"   STDOUT: {stdout.decode()}")
-            print(f"   STDERR: {stderr.decode()}")
+            print("❌ Dashboard failed to start:")
+            print(f"   STDOUT: {stdout}")
+            print(f"   STDERR: {stderr}")
             return None
+            
     except Exception as e:
-        print(f"❌ Error starting Dashboard: {e}")
+        print(f"❌ Failed to start Dashboard: {e}")
         return None
 
-def monitor_process(process, name):
-    """Monitor a process and print its output"""
-    while process.poll() is None:
-        output = process.stdout.readline()
-        if output:
-            print(f"[{name}] {output.decode().strip()}")
-        error = process.stderr.readline()
-        if error:
-            print(f"[{name} ERROR] {error.decode().strip()}")
+def signal_handler(signum, frame):
+    """Handle shutdown signals"""
+    print("\n🛑 Shutting down CinePi services...")
+    sys.exit(0)
 
 def main():
     """Main startup function"""
     print("🎬 CinePi Dashboard Startup")
-    print("=" * 40)
+    print("=" * 32)
+    
+    # Set up signal handlers
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
     
     # Check dependencies
     if not check_dependencies():
         sys.exit(1)
     
-    # Check if virtual environment exists
-    if os.path.exists('.venv'):
+    # Check virtual environment
+    if hasattr(sys, 'real_prefix') or (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix):
         print("✅ Virtual environment found")
     else:
-        print("⚠️  No virtual environment found, using system Python")
+        print("⚠️  No virtual environment detected")
     
     # Start web preview server
     web_preview_process = start_web_preview_server()
     if not web_preview_process:
         print("❌ Failed to start Web Preview Server")
         sys.exit(1)
+    
+    # Wait a moment for web preview to fully start
+    time.sleep(2)
     
     # Start dashboard
     dashboard_process = start_dashboard()
@@ -130,35 +160,36 @@ def main():
     
     print("\n🎉 CinePi Dashboard is now running!")
     print("=" * 40)
-    print("📊 Dashboard: http://192.168.1.158:5000")
-    print("📹 Live Preview: http://192.168.1.158:8080")
+    print("📱 Dashboard: http://localhost:5000")
+    print("📷 Web Preview: http://localhost:8080")
+    print("🔄 Live Preview: http://localhost:5000/live-preview")
     print("=" * 40)
     print("Press Ctrl+C to stop all services")
     
-    # Set up signal handler for graceful shutdown
-    def signal_handler(sig, frame):
-        print("\n🛑 Shutting down CinePi Dashboard...")
+    try:
+        # Keep the main process running
+        while True:
+            time.sleep(1)
+            
+            # Check if processes are still running
+            if web_preview_process.poll() is not None:
+                print("❌ Web Preview Server stopped unexpectedly")
+                break
+                
+            if dashboard_process.poll() is not None:
+                print("❌ Dashboard stopped unexpectedly")
+                break
+                
+    except KeyboardInterrupt:
+        print("\n🛑 Shutting down...")
+    finally:
+        # Clean up processes
         if web_preview_process:
             web_preview_process.terminate()
         if dashboard_process:
             dashboard_process.terminate()
-        print("✅ Shutdown complete")
-        sys.exit(0)
-    
-    signal.signal(signal.SIGINT, signal_handler)
-    
-    # Monitor processes
-    try:
-        while True:
-            if web_preview_process.poll() is not None:
-                print("❌ Web Preview Server stopped unexpectedly")
-                break
-            if dashboard_process.poll() is not None:
-                print("❌ Dashboard stopped unexpectedly")
-                break
-            time.sleep(1)
-    except KeyboardInterrupt:
-        signal_handler(signal.SIGINT, None)
+        
+        print("✅ All services stopped")
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main() 

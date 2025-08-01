@@ -5,12 +5,20 @@ This module contains the Flask application factory pattern for creating
 the CinePi dashboard application with proper configuration and extensions.
 """
 
+import sys
+import os
+from pathlib import Path
+
+# Add the parent directory to Python path for dashboard imports
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
 from flask import Flask
 from flask_socketio import SocketIO
-from pathlib import Path
 from logging.handlers import RotatingFileHandler
 import logging
-import os
 import subprocess
 import threading
 import time
