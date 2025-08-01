@@ -11,12 +11,44 @@ from pathlib import Path
 from logging.handlers import RotatingFileHandler
 import logging
 import os
+import subprocess
+import threading
+import time
 
 from dashboard.extensions import init_extensions
 from dashboard.routes import init_routes
 from dashboard.services import init_services
 # Ensure websocket handlers (including /ws namespace) are registered
 import dashboard.routes.websocket  # noqa: F401
+
+
+def start_web_preview_server():
+    """Start the web preview server in a separate process"""
+    try:
+        # Check if web_preview.py exists
+        if not os.path.exists('web_preview.py'):
+            print("Warning: web_preview.py not found, skipping web preview server")
+            return None
+        
+        # Start web preview server
+        print("Starting Web Preview Server on port 8080...")
+        process = subprocess.Popen([
+            'python', 'web_preview.py'
+        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        
+        # Wait a moment for server to start
+        time.sleep(2)
+        
+        if process.poll() is None:
+            print("✅ Web Preview Server started successfully on port 8080")
+            return process
+        else:
+            stdout, stderr = process.communicate()
+            print(f"❌ Failed to start Web Preview Server: {stderr.decode()}")
+            return None
+    except Exception as e:
+        print(f"❌ Error starting Web Preview Server: {e}")
+        return None
 
 
 def create_app(config_name='development'):
@@ -103,13 +135,8 @@ def create_socketio_app(app):
     Returns:
         SocketIO: Configured SocketIO instance
     """
-    socketio = SocketIO(
-        app,
-        cors_allowed_origins="*",
-        async_mode='threading',
-        logger=True,
-        engineio_logger=True
-    )
+    # Use the existing socketio instance from extensions
+    from dashboard.extensions import socketio
     return socketio
 
 
@@ -119,13 +146,24 @@ if __name__ == '__main__':
     socketio = create_socketio_app(app)
     
     print("Starting CinePi Dashboard...")
-    print(f"Dashboard URL: http://localhost:5000")
-    print(f"SocketIO URL: http://localhost:5000")
+    print(f"Dashboard URL: http://0.0.0.0:5000")
+    print(f"SocketIO URL: http://0.0.0.0:5000")
     
-    socketio.run(
-        app,
-        host='0.0.0.0',
-        port=5000,
-        debug=True,
-        use_reloader=True
-    )
+    # Start web preview server automatically
+    web_preview_process = start_web_preview_server()
+    
+    try:
+        socketio.run(
+            app,
+            host='0.0.0.0',
+            port=5000,
+            debug=True,
+            use_reloader=True
+        )
+    except KeyboardInterrupt:
+        print("\nShutting down CinePi Dashboard...")
+        if web_preview_process:
+            print("Stopping Web Preview Server...")
+            web_preview_process.terminate()
+            web_preview_process.wait()
+        print("✅ Dashboard shutdown complete")
