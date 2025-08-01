@@ -123,6 +123,19 @@ def signal_handler(signum, frame):
     print("\n🛑 Shutting down CinePi services...")
     sys.exit(0)
 
+def get_pi_ip_address():
+    """Get the Pi's IP address"""
+    try:
+        import socket
+        # Get the Pi's IP address
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip_address = s.getsockname()[0]
+        s.close()
+        return ip_address
+    except:
+        return "192.168.1.158"  # Fallback to known Pi IP
+
 def main():
     """Main startup function"""
     print("🎬 CinePi Dashboard Startup")
@@ -158,12 +171,15 @@ def main():
         web_preview_process.terminate()
         sys.exit(1)
     
+    # Get Pi IP address
+    pi_ip = get_pi_ip_address()
+    
     print("\n🎉 CinePi Dashboard is now running!")
-    print("=" * 40)
-    print("📱 Dashboard: http://localhost:5000")
-    print("📷 Web Preview: http://localhost:8080")
-    print("🔄 Live Preview: http://localhost:5000/live-preview")
-    print("=" * 40)
+    print("=" * 50)
+    print(f"📱 Dashboard: http://{pi_ip}:5000")
+    print(f"📷 Web Preview: http://{pi_ip}:8080")
+    print(f"🔄 Live Preview: http://{pi_ip}:5000/live-preview")
+    print("=" * 50)
     print("Press Ctrl+C to stop all services")
     
     try:
