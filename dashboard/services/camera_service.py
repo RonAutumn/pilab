@@ -105,32 +105,8 @@ class CameraService:
             
             logging.getLogger(__name__).info("🔍 Checking Pi camera status...")
             
-            # Camera status check command - Updated to use virtual environment
-            # Use the same .venv environment as the web preview server
-            camera_check_cmd = '''bash -c "source .venv/bin/activate && python -c \"
-import json
-try:
-    from picamera2 import Picamera2
-    picam2 = Picamera2()
-    print(json.dumps({
-        'camera_available': True, 
-        'sensor': 'imx477', 
-        'resolution': '12MP',
-        'status': 'connected'
-    }))
-except ImportError as e:
-    print(json.dumps({
-        'camera_available': False,
-        'error': 'Picamera2 not available: ' + str(e),
-        'status': 'disconnected'
-    }))
-except Exception as e:
-    print(json.dumps({
-        'camera_available': False,
-        'error': 'Camera error: ' + str(e),
-        'status': 'error'
-    }))
-\""'''
+            # Camera status check command - Fixed shell escaping
+            camera_check_cmd = '''python -c "import json; from picamera2 import Picamera2; picam2 = Picamera2(); print(json.dumps({'camera_available': True, 'sensor': 'imx477', 'resolution': '12MP', 'status': 'connected'}))"'''
             
             if self.running_on_pi:
                 # Running on Pi, execute locally with virtual environment
@@ -415,33 +391,8 @@ except Exception as e:
                     return self.camera_manager.supported_parameters()
                 except Exception as e:
                     logging.getLogger(__name__).warning("CameraManager.supported_parameters failed: %s", e)
-            # Legacy fallback with Picamera2 - Updated to avoid cinepi.camera import error
-            params_cmd = '''python -c "
-import json
-try:
-    from picamera2 import Picamera2
-    picam2 = Picamera2()
-    print(json.dumps({
-        'iso': {'min': 100, 'max': 800, 'step': 100, 'values': [100, 200, 400, 800]},
-        'gain': {'min': 1.0, 'max': 8.0, 'step': 0.1},
-        'exposure_modes': ['auto', 'manual'],
-        'resolutions': ['4056x3040', '2028x1520', '1014x760']
-    }))
-except ImportError as e:
-    print(json.dumps({
-        'iso': {'min': 100, 'max': 800, 'step': 100, 'values': [100, 200, 400, 800]},
-        'gain': {'min': 1.0, 'max': 8.0, 'step': 0.1},
-        'exposure_modes': ['auto', 'manual'],
-        'resolutions': ['4056x3040', '2028x1520', '1014x760']
-    }))
-except Exception as e:
-    print(json.dumps({
-        'iso': {'min': 100, 'max': 800, 'step': 100, 'values': [100, 200, 400, 800]},
-        'gain': {'min': 1.0, 'max': 8.0, 'step': 0.1},
-        'exposure_modes': ['auto', 'manual'],
-        'resolutions': ['4056x3040', '2028x1520', '1014x760']
-    }))
-"'''
+            # Legacy fallback with Picamera2 - Fixed shell escaping
+            params_cmd = '''python -c "import json; from picamera2 import Picamera2; picam2 = Picamera2(); print(json.dumps({'iso': {'min': 100, 'max': 800, 'step': 100, 'values': [100, 200, 400, 800]}, 'gain': {'min': 1.0, 'max': 8.0, 'step': 0.1}, 'exposure_modes': ['auto', 'manual'], 'resolutions': ['4056x3040', '2028x1520', '1014x760']}))"'''
             
             if self.running_on_pi:
                 # Running on Pi, execute locally
@@ -524,34 +475,8 @@ except Exception as e:
             
             logging.getLogger(__name__).info("🔍 Taking snapshot...")
             
-            # Take snapshot command - Updated to avoid cinepi.camera import error
-            snapshot_cmd = '''python -c "
-import json
-import time
-try:
-    from picamera2 import Picamera2
-    picam2 = Picamera2()
-    config = picam2.create_preview_configuration()
-    picam2.configure(config)
-    picam2.start()
-    time.sleep(1)
-    frame = picam2.capture_array()
-    picam2.stop()
-    print(json.dumps({
-        'success': True,
-        'message': 'Manual snapshot taken successfully'
-    }))
-except ImportError as e:
-    print(json.dumps({
-        'success': False,
-        'error': 'Picamera2 not available: ' + str(e)
-    }))
-except Exception as e:
-    print(json.dumps({
-        'success': False,
-        'error': 'Snapshot error: ' + str(e)
-    }))
-"'''
+            # Take snapshot command - Fixed shell escaping
+            snapshot_cmd = '''python -c "import json; import time; from picamera2 import Picamera2; picam2 = Picamera2(); config = picam2.create_preview_configuration(); picam2.configure(config); picam2.start(); time.sleep(1); frame = picam2.capture_array(); picam2.stop(); print(json.dumps({'success': True, 'message': 'Manual snapshot taken successfully'}))"'''
             
             if self.running_on_pi:
                 # Running on Pi, execute locally

@@ -178,7 +178,7 @@ def main():
     print("=" * 50)
     print(f"📱 Dashboard: http://{pi_ip}:5000")
     print(f"📷 Web Preview: http://{pi_ip}:8080")
-    print(f"🔄 Live Preview: http://{pi_ip}:5000/live-preview")
+    print(f"🔄 Live Preview: http://{pi_ip}:5000/stream")
     print("=" * 50)
     print("Press Ctrl+C to stop all services")
     
