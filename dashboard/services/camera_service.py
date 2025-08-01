@@ -107,7 +107,7 @@ class CameraService:
             
             # Camera status check command - Updated to use virtual environment
             # Use the same .venv environment as the web preview server
-            camera_check_cmd = '''source .venv/bin/activate && python -c "
+            camera_check_cmd = '''bash -c "source .venv/bin/activate && python -c \"
 import json
 try:
     from picamera2 import Picamera2
@@ -130,7 +130,7 @@ except Exception as e:
         'error': 'Camera error: ' + str(e),
         'status': 'error'
     }))
-"'''
+\""'''
             
             if self.running_on_pi:
                 # Running on Pi, execute locally with virtual environment
@@ -334,7 +334,7 @@ except Exception as e:
                     try:
                         # Start camera preview on Pi
                         subprocess.run(
-                            ['ssh', self.pi_host, 'cd ~/pilab && source .venv/bin/activate && nohup python hdmi_preview.py > /dev/null 2>&1 &'],
+                            ['ssh', self.pi_host, 'cd ~/pilab && bash -c "source .venv/bin/activate && nohup python hdmi_preview.py > /dev/null 2>&1 &"'],
                             timeout=5
                         )
                         self.pi_camera_running = True
@@ -457,7 +457,7 @@ except Exception as e:
             else:
                 # Running remotely, use SSH
                 logging.getLogger(__name__).info("🔍 Getting supported parameters via SSH...")
-                ssh_cmd = f'''cd ~/pilab && source .venv/bin/activate && {params_cmd}'''
+                ssh_cmd = f'''cd ~/pilab && bash -c "source .venv/bin/activate && {params_cmd}"'''
                 result = subprocess.run(
                     ['ssh', self.pi_host, ssh_cmd],
                     capture_output=True,
@@ -567,7 +567,7 @@ except Exception as e:
             else:
                 # Running remotely, use SSH
                 logging.getLogger(__name__).info("🔍 Taking snapshot via SSH...")
-                ssh_cmd = f'''cd ~/pilab && source .venv/bin/activate && {snapshot_cmd}'''
+                ssh_cmd = f'''cd ~/pilab && bash -c "source .venv/bin/activate && {snapshot_cmd}"'''
                 result = subprocess.run(
                     ['ssh', self.pi_host, ssh_cmd], 
                     capture_output=True, 
@@ -666,7 +666,7 @@ except Exception as e:
             else:
                 # Running remotely, use SSH
                 logging.getLogger(__name__).info("🔍 Applying camera settings via SSH...")
-                ssh_cmd = f'''cd ~/pilab && source .venv/bin/activate && {settings_cmd}'''
+                ssh_cmd = f'''cd ~/pilab && bash -c "source .venv/bin/activate && {settings_cmd}"'''
                 result = subprocess.run(
                     ['ssh', self.pi_host, ssh_cmd],
                     capture_output=True,
