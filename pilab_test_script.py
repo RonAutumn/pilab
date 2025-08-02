@@ -173,6 +173,12 @@ class PiLabTestScript:
             # Stop camera
             picam2.stop()
             
+            # Close camera to release resources
+            picam2.close()
+            
+            # Small delay to ensure camera is fully released
+            time.sleep(1)
+            
             logger.info(f"📸 Successfully captured real image: {image_path}")
             logger.info(f"📊 Image size: {image.shape}")
             
