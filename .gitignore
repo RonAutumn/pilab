@@ -217,3 +217,7 @@ workflow.md
 workflow.mdc
 *.workflow.md
 *.workflow.mdc
+
+# All markdown files (may contain sensitive info)
+*.md
+*.mdc
