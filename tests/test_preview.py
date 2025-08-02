@@ -23,7 +23,7 @@ from io import BytesIO
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
 # Import the modules we want to test
-from config_manager import ConfigManager
+from src.config_manager import ConfigManager
 
 
 class TestFrameDispatcher(unittest.TestCase):

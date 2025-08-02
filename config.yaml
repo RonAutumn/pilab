@@ -1,28 +1,34 @@
-# CinePi Configuration File
+# PiLab Configuration File
 # Raspberry Pi Timelapse Camera System Settings
 
 camera:
   # Camera resolution [width, height]
-  # Options: [4056, 3040] (HQ Camera max), [3280, 2464] (v2 Camera max)
   resolution: [4056, 3040]
-  
-  # Exposure mode for optimal image quality
-  # Options: auto, night, nightpreview, backlight, spotlight, sports, snow, beach, verylong, fixedfps, antishake, fireworks
-  exposure_mode: "auto"
-  
-  # ISO sensitivity (100-800 for best quality)
-  iso: 100
-  
-  # Shutter speed in microseconds (0 = auto)
-  # Examples: 10000 = 1/100s, 33333 = 1/30s, 100000 = 1/10s
-  shutter_speed: 0
-  
-  # White balance mode
-  # Options: auto, sunlight, cloudy, shade, tungsten, fluorescent, incandescent, flash, horizon
-  awb_mode: "auto"
   
   # Image quality (1-100, higher = better quality, larger files)
   quality: 95
+  
+  # Camera rotation (degrees)
+  rotation: 180
+
+# Test script specific configuration
+capture:
+  # Interval between captures in seconds (10 minutes for test script)
+  interval_sec: 600
+  
+  # Resolution for test captures
+  resolution: "4056x3040"
+  
+  # Rotation for test captures
+  rotation: 180
+
+# Storage configuration for test script
+storage:
+  # Local directory for captures
+  local_dir: "${CAPTURE_DIR}"
+  
+  # Supabase bucket name
+  bucket: "pilab-captures"
 
 timelapse:
   # Interval between captures in seconds
@@ -92,9 +98,6 @@ advanced:
   
   # Enable histogram in preview
   show_histogram: false
-  
-  # Custom camera controls (advanced users only)
-  custom_controls: {}
   
   # Enable debug mode
   debug_mode: false

@@ -49,12 +49,26 @@ except ImportError:
 
 from config_manager import ConfigManager
 
+# Import our enhanced error handling and logging utilities
+try:
+    from dashboard.utils.logging_utils import get_logger, log_performance, generate_correlation_id
+    from dashboard.utils.retry import retry_on_network_error, RetryError, ValidationError, TransientError
+    from dashboard.utils.chunked_processing import ChunkedProcessor
+    ENHANCED_LOGGING_AVAILABLE = True
+except ImportError:
+    ENHANCED_LOGGING_AVAILABLE = False
+
 # Global variables for graceful shutdown
 shutdown_requested = False
 frame_dispatcher = None
 app = None
 
-logger = logging.getLogger(__name__)
+# Use enhanced logging if available, otherwise fall back to basic logging
+if ENHANCED_LOGGING_AVAILABLE:
+    correlation_id = generate_correlation_id()
+    logger = get_logger('pilab.preview', correlation_id=correlation_id)
+else:
+    logger = logging.getLogger(__name__)
 
 
 class FrameDispatcher:
@@ -100,7 +114,35 @@ class FrameDispatcher:
         if not PIL_AVAILABLE:
             logger.error("PIL/Pillow library not available")
             return False
+        
+        # Use performance logging if available
+        if ENHANCED_LOGGING_AVAILABLE:
+            with log_performance(logger, "camera_initialization", 
+                               camera_type="Picamera2", 
+                               resolution=f"{self.preview_resolution[0]}x{self.preview_resolution[1]}",
+                               fps=self.fps):
+                return self._initialize_camera_internal()
+        else:
+            return self._initialize_camera_internal()
+    
+    def _initialize_camera_internal(self) -> bool:
+        """Internal camera initialization with retry logic."""
+        if ENHANCED_LOGGING_AVAILABLE:
+            # Use retry decorator for camera initialization
+            @retry_on_network_error(max_attempts=3)
+            def init_camera():
+                return self._setup_camera()
             
+            try:
+                return init_camera()
+            except RetryError as e:
+                logger.error(f"Failed to initialize camera after retries: {e}")
+                return False
+        else:
+            return self._setup_camera()
+    
+    def _setup_camera(self) -> bool:
+        """Setup the camera hardware."""
         try:
             logger.info("Initializing camera for live preview...")
             self.camera = Picamera2()
@@ -112,9 +154,9 @@ class FrameDispatcher:
             resolution = self.preview_resolution
             logger.info(f"Using preview resolution: {resolution}")
             
-            # Create video configuration for streaming
+            # Create basic video configuration - no presets
             camera_config_dict = self.camera.create_video_configuration(
-                main={"size": resolution, "format": "RGB888"},
+                main={"size": resolution},
                 buffer_count=4  # More buffers for smooth streaming
             )
             
@@ -147,44 +189,11 @@ class FrameDispatcher:
             return
             
         try:
-            # Set exposure mode (auto for preview)
-            exposure_mode = camera_config.get('exposure_mode', 'auto')
-            if hasattr(controls, 'AeExposureMode'):
-                exposure_map = {
-                    'auto': controls.AeExposureMode.Auto,
-                    'night': controls.AeExposureMode.Night,
-                    'backlight': controls.AeExposureMode.BackLight,
-                    'spotlight': controls.AeExposureMode.SpotLight,
-                    'sports': controls.AeExposureMode.Sports,
-                    'snow': controls.AeExposureMode.Snow,
-                    'beach': controls.AeExposureMode.Beach,
-                    'verylong': controls.AeExposureMode.VeryLong,
-                    'fixedfps': controls.AeExposureMode.FixedFPS,
-                    'antishake': controls.AeExposureMode.AntiShake,
-                    'fireworks': controls.AeExposureMode.Fireworks
-                }
-                if exposure_mode in exposure_map:
-                    self.camera.set_controls({"AeExposureMode": exposure_map[exposure_mode]})
-            
-            # Set AWB mode
-            awb_mode = camera_config.get('awb_mode', 'auto')
-            if hasattr(controls, 'AwbMode'):
-                awb_map = {
-                    'auto': controls.AwbMode.Auto,
-                    'sunlight': controls.AwbMode.Sunlight,
-                    'cloudy': controls.AwbMode.Cloudy,
-                    'shade': controls.AwbMode.Shade,
-                    'tungsten': controls.AwbMode.Tungsten,
-                    'fluorescent': controls.AwbMode.Fluorescent,
-                    'incandescent': controls.AwbMode.Incandescent,
-                    'flash': controls.AwbMode.Flash,
-                    'horizon': controls.AwbMode.Horizon
-                }
-                if awb_mode in awb_map:
-                    self.camera.set_controls({"AwbMode": awb_map[awb_mode]})
+            # Use camera defaults - no hardcoded presets
+            logger.info("Using camera defaults - no custom settings applied")
                     
         except Exception as e:
-            logger.warning(f"Could not apply all camera settings: {e}")
+            logger.warning(f"Could not apply camera settings: {e}")
     
     def start_capture(self) -> bool:
         """Start the frame capture thread."""
@@ -221,7 +230,7 @@ class FrameDispatcher:
             try:
                 start_time = time.time()
                 
-                # Capture frame
+                # Capture frame - no color conversions
                 frame = self.camera.capture_array()
                 
                 # Update frame with thread safety
@@ -452,6 +461,13 @@ def main():
     @app.route('/')
     def index():
         """Main page with live preview."""
+        if ENHANCED_LOGGING_AVAILABLE:
+            logger.info("Serving main dashboard page", extra={
+                'route': '/',
+                'user_agent': request.headers.get('User-Agent', 'Unknown'),
+                'remote_addr': request.remote_addr
+            })
+        
         html_template = """
         <!DOCTYPE html>
         <html>
@@ -532,14 +548,36 @@ def main():
     @app.route('/video_feed')
     def video_feed():
         """MJPEG video stream endpoint."""
+        if ENHANCED_LOGGING_AVAILABLE:
+            logger.info("Starting video feed stream", extra={
+                'route': '/video_feed',
+                'quality': args.quality,
+                'remote_addr': request.remote_addr
+            })
+        
         def generate():
+            frame_count = 0
             while not shutdown_requested:
-                jpeg_data = frame_dispatcher.get_frame_jpeg(quality=args.quality)
-                if jpeg_data:
-                    yield (b'--frame\r\n'
-                           b'Content-Type: image/jpeg\r\n\r\n' + jpeg_data + b'\r\n')
-                else:
-                    # Send a blank frame or error image
+                try:
+                    jpeg_data = frame_dispatcher.get_frame_jpeg(quality=args.quality)
+                    if jpeg_data:
+                        frame_count += 1
+                        if ENHANCED_LOGGING_AVAILABLE and frame_count % 100 == 0:
+                            logger.debug(f"Streamed {frame_count} frames", extra={
+                                'frames_streamed': frame_count,
+                                'jpeg_size_bytes': len(jpeg_data)
+                            })
+                        yield (b'--frame\r\n'
+                               b'Content-Type: image/jpeg\r\n\r\n' + jpeg_data + b'\r\n')
+                    else:
+                        # Send a blank frame or error image
+                        time.sleep(0.1)
+                except Exception as e:
+                    if ENHANCED_LOGGING_AVAILABLE:
+                        logger.error(f"Error in video stream: {e}", extra={
+                            'frame_count': frame_count,
+                            'error_type': type(e).__name__
+                        })
                     time.sleep(0.1)
         
         return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')

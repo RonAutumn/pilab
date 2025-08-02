@@ -1,383 +1,398 @@
-# CinePi Timelapse System
+# PiLab Storage System
 
-A professional-grade timelapse photography system for Raspberry Pi 5 with HQ Camera, featuring comprehensive error handling, quality metrics, and graceful shutdown capabilities.
+A comprehensive storage and monitoring system for PiLab camera captures with Supabase integration, real-time dashboards, and automated retention policies.
 
-## 🎯 Features
+## 🚀 Quick Start Guide
 
-- **High-Quality Timelapse Capture**: Optimized for Raspberry Pi 5 with HQ Camera
-- **Comprehensive Error Handling**: Graceful shutdown, disk space monitoring, and permission validation
-- **Image Quality Analysis**: Real-time sharpness and brightness metrics
-- **Flexible Configuration**: YAML-based configuration with command-line overrides
-- **Robust Logging**: CSV metadata logging with data integrity protection
-- **Signal Handling**: Clean shutdown on Ctrl-C and system signals
-- **Resource Management**: Automatic cleanup and resource monitoring
+### Prerequisites
 
-## 📋 Hardware Requirements
+- Docker and Docker Compose
+- Python 3.8+
+- Git
 
-### Required Components
-- **Raspberry Pi 5** (4GB or 8GB RAM recommended)
-- **Raspberry Pi HQ Camera** (12MP Sony IMX477 sensor)
-- **16mm C-mount lens** (or compatible C-mount lens)
-- **MicroSD card** (64GB+ Class 10, UHS-I recommended)
-- **Power supply** (5V/3A minimum, 5V/4A recommended)
-- **Camera cable** (included with HQ Camera)
+### 1. Local Supabase Environment Setup
 
-### Optional Components
-- **Tripod or mounting system** for stable positioning
-- **External storage** (USB SSD for extended captures)
-- **Cooling solution** (active cooling recommended for long captures)
-- **Network connection** (WiFi or Ethernet for remote monitoring)
-
-## 🚀 Installation
-
-### 1. System Preparation
-
-```bash
-# Update Raspberry Pi OS
-sudo apt update && sudo apt upgrade -y
-
-# Enable camera interface
-sudo raspi-config nonint do_camera 0
-
-# Enable I2C (optional, for future sensor integration)
-sudo raspi-config nonint do_i2c 0
-
-# Reboot to apply changes
-sudo reboot
-```
-
-### 2. Install Dependencies
-
-```bash
-# Install system dependencies
-sudo apt install -y python3-pip python3-venv git
-
-# Install camera libraries
-sudo apt install -y python3-picamera2 python3-libcamera
-
-# Create virtual environment (recommended)
-python3 -m venv cinepi_env
-source cinepi_env/bin/activate
-
-# Install Python dependencies
-pip install -r requirements.txt
-```
-
-### 3. Clone and Setup
+The PiLab Storage System uses a local Supabase environment for development and testing.
 
 ```bash
 # Clone the repository
 git clone <repository-url>
-cd cinepi
+cd pilab
 
-# Copy configuration template
-cp config.yaml.example config.yaml
+# Start the local Supabase environment
+docker-compose -f infra/supabase/docker-compose.yml up -d
 
-# Edit configuration
-nano config.yaml
+# Wait for services to start (about 30 seconds)
+docker-compose -f infra/supabase/docker-compose.yml logs -f
 ```
 
-## ⚙️ Configuration
-
-### Configuration File Structure
-
-The system uses `config.yaml` for all settings. Here's a complete example:
-
-```yaml
-# Camera settings
-camera:
-  resolution: [4056, 3040]  # Full resolution
-  quality: 95               # JPEG quality (1-100)
-  iso: 100                  # ISO sensitivity
-  shutter_speed: 0          # Auto exposure (0) or microseconds
-  exposure_mode: "auto"     # auto, night, backlight, spotlight, sports, snow, beach, verylong, fixedfps, antishake, fireworks
-  awb_mode: "auto"          # auto, sunlight, cloudy, shade, tungsten, fluorescent, incandescent, flash, horizon
-
-# Timelapse settings
-timelapse:
-  interval_seconds: 30      # Capture interval
-  duration_hours: 24        # Total duration (0 = indefinite)
-  output_dir: "output/images"
-  filename_prefix: "timelapse"
-  image_format: "jpg"       # jpg, png, bmp
-  add_timestamp: true
-  create_daily_dirs: true
-
-# Logging settings
-logging:
-  log_level: "INFO"         # DEBUG, INFO, WARNING, ERROR
-  log_dir: "logs"
-  csv_filename: "timelapse_metadata.csv"
-```
-
-### Command-Line Options
+### 2. Database Schema Setup
 
 ```bash
-# Basic usage with default config
-python src/main.py
-
-# Custom interval and duration
-python src/main.py --interval 60 --duration 2
-
-# Custom output directory
-python src/main.py --output-dir /mnt/external/timelapse
-
-# Verbose logging
-python src/main.py --verbose
-
-# Test configuration without capturing
-python src/main.py --dry-run
-
-# Use custom config file
-python src/main.py --config my_config.yaml
+# Apply the database migrations
+docker exec -i pilab-postgres psql -U postgres -d pilab_dev < supabase/migrations/20240801_create_storage_audit_log.sql
+docker exec -i pilab-postgres psql -U postgres -d pilab_dev < supabase/migrations/20240801_verify_rls_policies.sql
 ```
 
-## 📸 Usage Examples
+### 3. Environment Configuration
 
-### Quick Start
+Create a `.env` file in the project root:
+
 ```bash
-# Start a 24-hour timelapse with 30-second intervals
-python src/main.py
+# Supabase Configuration
+SUPABASE_URL=http://localhost:54321
+SUPABASE_ANON_KEY=your_anon_key_here
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here
 
-# Start a 2-hour timelapse with 60-second intervals
-python src/main.py --interval 60 --duration 2
+# Storage Configuration
+STORAGE_BUCKET=pilab-dev
+MAX_FILE_SIZE=26214400  # 25MB in bytes
 
-# Test configuration without capturing images
-python src/main.py --dry-run --verbose
+# Logging Configuration
+LOG_LEVEL=INFO
+LOG_FORMAT=json
+LOG_DIR=logs
+
+# Retry Configuration
+RETRY_MAX_ATTEMPTS=3
+RETRY_BASE_DELAY=1.0
+RETRY_MAX_DELAY=60.0
+RETRY_JITTER=0.1
+
+# Chunked Processing
+CHUNK_SIZE=100
+MAX_CHUNKS=1000
+CHUNK_DELAY=0.1
+FAIL_FAST_THRESHOLD=0.1
+
+# Dashboard Configuration
+FLASK_PORT=5000
+FLASK_DEBUG=False
+FLASK_SECRET_KEY=your_secret_key_here
 ```
 
-### Advanced Usage
+### 4. Install Dependencies
+
 ```bash
-# High-frequency capture (5-second intervals for 1 hour)
-python src/main.py --interval 5 --duration 1
+# Install Python dependencies
+pip install -r requirements.txt
 
-# Long-term capture (indefinite duration)
-python src/main.py --interval 300 --duration 0
-
-# Custom output location
-python src/main.py --output-dir /mnt/ssd/timelapse --interval 60
+# Install additional dashboard dependencies
+pip install flask flask-socketio python-socketio
 ```
 
-### Background Operation
+### 5. Test the System
+
 ```bash
-# Run in background with nohup
-nohup python src/main.py --interval 60 --duration 8 > timelapse.log 2>&1 &
+# Run the integration tests
+python tests/test_storage_integration.py
 
-# Check status
-tail -f timelapse.log
-
-# Stop gracefully
-pkill -f "python src/main.py"
-```
-
-## 📊 Output and Logging
-
-### Image Files
-- **Location**: `output/images/YYYY-MM-DD/` (daily directories)
-- **Naming**: `timelapse_YYYYMMDD_HHMMSS_000001.jpg`
-- **Format**: JPEG with configurable quality
-
-### Log Files
-- **Application Log**: `logs/cinepi.log`
-- **Metadata CSV**: `logs/timelapse_metadata.csv`
-- **Console Output**: Real-time progress and status
-
-### CSV Metadata Structure
-```csv
-timestamp,filename,filepath,capture_number,interval_seconds,sharpness_score,brightness_value,file_size
-2024-01-01T12:00:00,timelapse_20240101_120000_000001.jpg,output/images/2024-01-01/timelapse_20240101_120000_000001.jpg,1,30,125.5,128.3,2048576
-```
-
-## 🔧 Troubleshooting
-
-### Common Issues
-
-#### Camera Not Detected
-```bash
-# Check camera connection
-vcgencmd get_camera
-
-# Expected output: supported=1 detected=1
-
-# Check camera permissions
-ls -la /dev/video*
-
-# Enable camera interface
-sudo raspi-config nonint do_camera 0
-sudo reboot
-```
-
-#### Permission Errors
-```bash
-# Check user permissions
-groups $USER
-
-# Add user to video group
-sudo usermod -a -G video $USER
-
-# Log out and back in, or reboot
-sudo reboot
-```
-
-#### Insufficient Disk Space
-```bash
-# Check available space
-df -h
-
-# Clean up old captures
-rm -rf output/images/*
-
-# Use external storage
-python src/main.py --output-dir /mnt/external/timelapse
-```
-
-#### High CPU Usage
-```bash
-# Check system resources
-htop
-
-# Reduce image quality
-# Edit config.yaml: camera.quality: 85
-
-# Use lower resolution
-# Edit config.yaml: camera.resolution: [2028, 1520]
-```
-
-#### Memory Issues
-```bash
-# Check memory usage
-free -h
-
-# Increase swap space
-sudo dphys-swapfile swapoff
-sudo nano /etc/dphys-swapfile
-# Set CONF_SWAPSIZE=2048
-sudo dphys-swapfile setup
-sudo dphys-swapfile swapon
-```
-
-### Performance Optimization
-
-#### For Long Captures
-```yaml
-# Optimize for extended operation
-camera:
-  resolution: [2028, 1520]  # Lower resolution
-  quality: 85               # Slightly lower quality
-  exposure_mode: "auto"     # Auto exposure
-
-timelapse:
-  interval_seconds: 60      # Longer intervals
-```
-
-#### For High-Quality Captures
-```yaml
-# Optimize for quality
-camera:
-  resolution: [4056, 3040]  # Full resolution
-  quality: 95               # High quality
-  iso: 100                  # Low ISO for less noise
-  exposure_mode: "auto"     # Auto exposure
-
-timelapse:
-  interval_seconds: 30      # Shorter intervals
-```
-
-### System Monitoring
-
-#### Check System Health
-```bash
-# Monitor temperature
-vcgencmd measure_temp
-
-# Check CPU frequency
-vcgencmd measure_clock arm
-
-# Monitor disk usage
-watch -n 5 df -h
-
-# Check memory usage
-watch -n 5 free -h
-```
-
-#### Log Analysis
-```bash
-# View recent logs
-tail -f logs/cinepi.log
-
-# Search for errors
-grep ERROR logs/cinepi.log
-
-# Check capture statistics
-tail -20 logs/timelapse_metadata.csv
-```
-
-## 🧪 Testing
-
-### Run Test Suite
-```bash
-# Test error handling
-python test_error_handling.py
-
-# Expected output: All tests passed
-```
-
-### Manual Testing
-```bash
-# Test configuration
-python src/main.py --dry-run --verbose
-
-# Test short capture
-python src/main.py --interval 5 --duration 0.1
-
-# Test signal handling (Ctrl-C)
-python src/main.py --interval 10
-# Press Ctrl-C to test graceful shutdown
+# Test the dashboard
+python dashboard/start_dashboard.py --help
 ```
 
 ## 📁 Project Structure
 
 ```
-cinepi/
-├── src/                    # Source code
-│   ├── main.py            # Main entry point
-│   ├── capture_utils.py   # Camera operations
-│   ├── config_manager.py  # Configuration management
-│   └── metrics.py         # Image quality and logging
-├── config.yaml            # Configuration file
-├── requirements.txt       # Python dependencies
-├── README.md             # This file
-├── test_error_handling.py # Error handling tests
-├── output/               # Captured images
-│   └── images/
-└── logs/                 # Log files
-    ├── cinepi.log
-    └── timelapse_metadata.csv
+pilab/
+├── src/                          # Core source code
+│   ├── supabase_client.py       # Supabase integration
+│   ├── storage_service.py       # Storage operations
+│   └── ...
+├── dashboard/                    # Dashboard components
+│   ├── app.py                   # Flask-SocketIO web dashboard
+│   ├── cli_dashboard.py         # Command-line dashboard
+│   ├── utils/                   # Dashboard utilities
+│   │   ├── logging_utils.py     # Structured logging
+│   │   ├── retry.py            # Retry logic
+│   │   └── chunked_processing.py # Bulk operations
+│   └── templates/               # Web dashboard templates
+├── scripts/                     # Monitoring and maintenance scripts
+│   ├── storage_monitor.py       # Storage monitoring
+│   ├── retention_enforcer.py    # Retention policy enforcement
+│   └── audit_logger.py          # Audit logging
+├── supabase/                    # Database migrations
+│   └── migrations/
+├── tests/                       # Test suite
+│   └── test_storage_integration.py
+└── logs/                        # Application logs
 ```
 
+## 🔧 Core Features
+
+### 1. Storage Management
+
+- **Automatic Uploads**: Integrate with PiLab capture pipeline using `--supabase` flag
+- **File Deduplication**: SHA-256 hashing prevents duplicate uploads
+- **Metadata Tracking**: Comprehensive capture metrics and EXIF data
+- **Retention Policies**: Automated cleanup of old files with audit trails
+
+### 2. Real-Time Monitoring
+
+- **Web Dashboard**: Flask-SocketIO powered dashboard with live updates
+- **CLI Dashboard**: Terminal-based monitoring with configurable intervals
+- **Health Checks**: `/api/health` and `/api/metrics` endpoints
+- **Alert System**: Automatic notifications for failures and capacity issues
+
+### 3. Error Handling & Reliability
+
+- **Retry Logic**: Exponential backoff with jitter for transient failures
+- **Structured Logging**: JSON-formatted logs with correlation IDs
+- **Chunked Processing**: Bulk operations to prevent memory issues
+- **Graceful Degradation**: Fallback mechanisms for service failures
+
+### 4. Security & Compliance
+
+- **Row-Level Security (RLS)**: Database-level access control
+- **Audit Logging**: Complete audit trail for all operations
+- **Service Role Isolation**: Proper key management and access patterns
+- **Input Validation**: Comprehensive validation for all inputs
+
+## 🎯 Usage Examples
+
+### Basic Upload
+
+```python
+from src.supabase_client import create_pilab_client
+
+# Initialize client
+client = create_pilab_client()
+
+# Upload an image
+result = client.upload_and_log(
+    file_path="captures/image_001.jpg",
+    shot_type="timelapse",
+    metadata={
+        "brightness": 0.75,
+        "sharpness": 0.82,
+        "contrast": 0.68
+    }
+)
+
+print(f"Upload successful: {result['filename']}")
+```
+
+### Storage Monitoring
+
+```python
+from scripts.storage_monitor import StorageMonitor
+from src.supabase_client import create_pilab_client
+
+# Initialize monitor
+client = create_pilab_client()
+monitor = StorageMonitor(client)
+
+# Check storage usage
+usage = monitor.monitor_storage_usage('pilab-dev')
+print(f"Total files: {usage['total_files']}")
+print(f"Total size: {usage['total_size_mb']} MB")
+
+# Enforce retention policy (30 days)
+result = monitor.enforce_retention_policy('pilab-dev', 30, dry_run=True)
+print(f"Files to delete: {result['files_soft_deleted']}")
+```
+
+### Dashboard Usage
+
+```bash
+# Start web dashboard
+python dashboard/start_dashboard.py web
+
+# Start CLI dashboard
+python dashboard/start_dashboard.py cli --interval 30
+
+# Access web dashboard
+# Open http://localhost:5000 in your browser
+```
+
+## 🧪 Testing
+
+### Running Tests
+
+```bash
+# Run all tests
+python -m pytest tests/ -v
+
+# Run specific test file
+python tests/test_storage_integration.py
+
+# Run with coverage
+python -m pytest tests/ --cov=src --cov-report=html
+```
+
+### Test Categories
+
+1. **Unit Tests**: Individual component testing
+2. **Integration Tests**: End-to-end workflow testing
+3. **Performance Tests**: Load and stress testing
+4. **Security Tests**: RLS and access control testing
+
+### Test Data
+
+The test suite includes:
+- Mock Supabase responses
+- Sample image files
+- Database fixtures
+- Performance benchmarks
+
+## 🔍 Monitoring & Troubleshooting
+
+### Log Files
+
+- `logs/pilab.dashboard.log` - Dashboard application logs
+- `logs/pilab.storage_monitor.log` - Storage monitoring logs
+- `logs/pilab.test.integration.log` - Integration test logs
+
+### Common Issues
+
+#### Connection Errors
+
+```bash
+# Check Supabase services
+docker-compose -f infra/supabase/docker-compose.yml ps
+
+# Check logs
+docker-compose -f infra/supabase/docker-compose.yml logs supabase
+```
+
+#### Permission Errors
+
+```bash
+# Verify RLS policies
+docker exec pilab-postgres psql -U postgres -d pilab_dev -c "\dp+ captures"
+
+# Check service role permissions
+docker exec pilab-postgres psql -U postgres -d pilab_dev -c "SELECT * FROM pg_policies WHERE tablename = 'captures';"
+```
+
+#### Performance Issues
+
+```bash
+# Monitor chunked processing
+export CHUNK_SIZE=50
+export CHUNK_DELAY=0.2
+
+# Check system resources
+docker stats pilab-postgres
+```
+
+### Health Checks
+
+```bash
+# Check system health
+curl http://localhost:5000/api/health
+
+# Get metrics
+curl http://localhost:5000/api/metrics
+
+# Check storage usage
+curl http://localhost:5000/api/storage/usage
+```
+
+## 🔧 Configuration
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SUPABASE_URL` | `http://localhost:54321` | Supabase instance URL |
+| `SUPABASE_ANON_KEY` | - | Anonymous API key |
+| `SUPABASE_SERVICE_ROLE_KEY` | - | Service role API key |
+| `STORAGE_BUCKET` | `pilab-dev` | Storage bucket name |
+| `LOG_LEVEL` | `INFO` | Logging level |
+| `RETRY_MAX_ATTEMPTS` | `3` | Maximum retry attempts |
+| `CHUNK_SIZE` | `100` | Chunk size for bulk operations |
+
+### Dashboard Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `FLASK_PORT` | `5000` | Web dashboard port |
+| `FLASK_DEBUG` | `False` | Debug mode |
+| `FLASK_SECRET_KEY` | - | Flask secret key |
+
+## 📊 Metrics & Monitoring
+
+### Available Metrics
+
+- `pilab_storage_files_total` - Total number of files
+- `pilab_storage_size_bytes` - Total storage size
+- `pilab_uploads_total` - Total upload attempts
+- `pilab_uploads_success_total` - Successful uploads
+- `pilab_uploads_failed_total` - Failed uploads
+- `pilab_captures_total` - Total captures
+
+### Dashboard Features
+
+- **Real-time Updates**: Live data via WebSocket connections
+- **Interactive Charts**: Storage usage and upload metrics
+- **Alert System**: Automatic notifications for issues
+- **Export Functionality**: CSV and JSON data export
+- **Responsive Design**: Works on desktop and mobile
+
+## 🔒 Security Considerations
+
+### Row-Level Security (RLS)
+
+All tables have RLS enabled with appropriate policies:
+
+- **Anonymous Access**: Read-only access to public data
+- **Service Role**: Full access for backend operations
+- **Audit Logging**: All access attempts are logged
+
+### Key Management
+
+- Never expose service role keys to clients
+- Use environment variables for sensitive data
+- Rotate keys regularly
+- Monitor key usage
+
+### Data Protection
+
+- All sensitive data is encrypted at rest
+- Network communication uses HTTPS
+- Input validation prevents injection attacks
+- Audit trails track all data access
+
 ## 🤝 Contributing
+
+### Development Setup
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
 4. Add tests for new functionality
-5. Submit a pull request
+5. Update documentation
+6. Submit a pull request
 
-## 📄 License
+### Code Standards
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+- Follow PEP 8 style guidelines
+- Add type hints to all functions
+- Include docstrings for all classes and methods
+- Write comprehensive tests
+- Update documentation for API changes
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🆘 Support
 
 For issues and questions:
+
 1. Check the troubleshooting section above
-2. Review the logs in `logs/cinepi.log`
-3. Run the test suite: `python test_error_handling.py`
-4. Create an issue with detailed error information
+2. Review the logs for error details
+3. Run the integration tests
+4. Create an issue with detailed information
 
-## 🔄 Version History
+## 🔄 Changelog
 
-- **v1.0.0**: Initial release with comprehensive error handling
-- Features: Signal handling, disk space monitoring, CSV integrity protection
-- Hardware: Raspberry Pi 5 + HQ Camera support
-- Quality: Real-time image analysis and metadata logging
+### v1.0.0 (2024-08-01)
+- Initial release of PiLab Storage System
+- Complete Supabase integration
+- Real-time dashboard implementation
+- Comprehensive error handling and retry logic
+- RLS compliance and security features
+- Automated retention policies
+- Integration test suite

@@ -1,0 +1,58 @@
+---
+alwaysApply: true
+description: SSH connection management and Pi development workflow
+---
+
+# SSH Connection Management
+
+## ⚠️ SSH Connection State Awareness
+
+**CRITICAL**: Always check if you're already connected to the Pi before attempting new SSH connections.
+
+### Connection State Indicators
+- **Already Connected**: If you see Pi terminal prompts like `pi@raspberrypi:~$` or similar
+- **Local Environment**: If you see local terminal prompts like `user@hostname:~$` or Windows PowerShell prompts
+
+### Best Practices
+- **Check Current Connection**: Look at your terminal prompt to determine if you're already on the Pi
+- **Avoid Multiple SSH**: Don't SSH into the Pi if you're already connected
+- **Use Existing Session**: Continue working in the current Pi session rather than creating new connections
+- **Session Management**: Use `screen` or `tmux` for persistent sessions if needed
+
+### Common Pi Development Commands
+When already connected to the Pi:
+```bash
+# Navigate to PiLab directory
+cd /home/pi/pilab
+
+# Check PiLab status
+python3 run.py --status
+
+# View logs
+tail -f /var/log/pilab.log
+
+# Restart PiLab service
+sudo systemctl restart pilab
+
+# Check system resources
+htop
+df -h
+free -h
+```
+
+### When to Use New SSH Connection
+- **Initial Connection**: First time connecting to Pi in a session
+- **Connection Lost**: If the current SSH session was disconnected
+- **Different User**: Need to connect as a different user
+- **Fresh Environment**: Need a clean terminal environment
+
+### Connection Verification
+Before running SSH commands, verify your current location:
+```bash
+# Check if you're on the Pi
+hostname
+whoami
+pwd
+```
+
+**Remember**: It's more efficient to use an existing Pi connection than to establish multiple SSH sessions.

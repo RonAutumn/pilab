@@ -8,6 +8,7 @@ import os
 import shutil
 from typing import Optional, Tuple, Dict, Any
 from pathlib import Path
+from datetime import datetime
 
 try:
     from picamera2 import Picamera2
@@ -21,6 +22,68 @@ except ImportError:
 from config_manager import ConfigManager
 
 logger = logging.getLogger(__name__)
+
+
+def _sanitize_tag(tag: Optional[str]) -> Optional[str]:
+    """Sanitize a tag to allow only [A-Za-z0-9_-]; replace others with '_'."""
+    if tag is None:
+        return None
+    import re
+    sanitized = re.sub(r'[^A-Za-z0-9_-]+', '_', tag.strip())
+    return sanitized or None
+
+
+def _build_capture_dir(root: Path, ts: datetime, tag: Optional[str]) -> Path:
+    """Build directory path as root/YYYY-MM-DD or root/YYYY-MM-DD_<tag>."""
+    date_part = ts.strftime('%Y-%m-%d')
+    tag_sanitized = _sanitize_tag(tag)
+    folder = f"{date_part}_{tag_sanitized}" if tag_sanitized else date_part
+    return root / folder
+
+
+def save_capture(image, *, root: Path, tag: Optional[str], ts: datetime) -> Path:
+    """
+    Save an image to disk under ./captures/YYYY-MM-DD[/_tag]/HHMMSS_microsec.jpg.
+
+    - image: either a numpy ndarray or raw bytes for an already-encoded JPEG/PNG.
+    - root: base directory (default typically Path('./captures')).
+    - tag: optional test name for suffixing the day folder.
+    - ts: timestamp used for folder and filename.
+
+    Returns: Path to the saved file. Raises IOError/OSError on failure.
+    """
+    try:
+        import numpy as np
+        from PIL import Image
+        base_dir = _build_capture_dir(root, ts, tag)
+        base_dir.mkdir(parents=True, exist_ok=True)
+
+        filename = f"{ts.strftime('%H%M%S_%f')}.jpg"
+        out_path = base_dir / filename
+
+        # If ndarray, encode via PIL
+        if 'numpy' in str(type(image)) or isinstance(image, getattr(np, 'ndarray', tuple())):
+            img = Image.fromarray(image)
+            img.save(str(out_path), 'JPEG', quality=95, optimize=True)
+        elif isinstance(image, (bytes, bytearray)):
+            # Assume already-encoded bytes (e.g., JPEG). Write directly.
+            with open(out_path, 'wb') as f:
+                f.write(image)
+        else:
+            # Unknown type; try PIL open/save fallback if possible
+            try:
+                img = Image.fromarray(image)  # may raise
+                img.save(str(out_path), 'JPEG', quality=95, optimize=True)
+            except Exception as e:
+                raise IOError(f"Unsupported image type for save_capture: {type(image)}") from e
+
+        return out_path
+    except PermissionError as e:
+        raise
+    except OSError as e:
+        raise
+    except Exception as e:
+        raise IOError(f"Failed to save capture: {e}") from e
 
 
 class CameraManager:
@@ -52,9 +115,9 @@ class CameraManager:
             resolution = tuple(camera_config.get('resolution', [4056, 3040]))
             quality = camera_config.get('quality', 95)
             
-            # Create still capture configuration
+            # Create basic still capture configuration - no presets
             camera_config_dict = self.camera.create_still_configuration(
-                main={"size": resolution, "format": "RGB888"},
+                main={"size": resolution},
                 buffer_count=2
             )
             
@@ -90,54 +153,11 @@ class CameraManager:
             return
             
         try:
-            # Set exposure mode
-            exposure_mode = camera_config.get('exposure_mode', 'auto')
-            if hasattr(controls, 'AeExposureMode'):
-                exposure_map = {
-                    'auto': controls.AeExposureMode.Auto,
-                    'night': controls.AeExposureMode.Night,
-                    'backlight': controls.AeExposureMode.BackLight,
-                    'spotlight': controls.AeExposureMode.SpotLight,
-                    'sports': controls.AeExposureMode.Sports,
-                    'snow': controls.AeExposureMode.Snow,
-                    'beach': controls.AeExposureMode.Beach,
-                    'verylong': controls.AeExposureMode.VeryLong,
-                    'fixedfps': controls.AeExposureMode.FixedFPS,
-                    'antishake': controls.AeExposureMode.AntiShake,
-                    'fireworks': controls.AeExposureMode.Fireworks
-                }
-                if exposure_mode in exposure_map:
-                    self.camera.set_controls({"AeExposureMode": exposure_map[exposure_mode]})
-            
-            # Set ISO
-            iso = camera_config.get('iso', 100)
-            self.camera.set_controls({"AnalogueGain": iso / 100.0})
-            
-            # Set shutter speed (exposure time)
-            shutter_speed = camera_config.get('shutter_speed', 0)
-            if shutter_speed > 0:
-                self.camera.set_controls({"ExposureTime": shutter_speed})
-            
-            # Set white balance mode
-            awb_mode = camera_config.get('awb_mode', 'auto')
-            awb_map = {
-                'auto': controls.AwbModeEnum.Auto,
-                'sunlight': controls.AwbModeEnum.Sunlight,
-                'cloudy': controls.AwbModeEnum.Cloudy,
-                'shade': controls.AwbModeEnum.Shade,
-                'tungsten': controls.AwbModeEnum.Tungsten,
-                'fluorescent': controls.AwbModeEnum.Fluorescent,
-                'incandescent': controls.AwbModeEnum.Incandescent,
-                'flash': controls.AwbModeEnum.Flash,
-                'horizon': controls.AwbModeEnum.Horizon
-            }
-            if awb_mode in awb_map:
-                self.camera.set_controls({"AwbMode": awb_map[awb_mode]})
-                
-            logger.info("Camera settings applied successfully")
-            
+            # Use camera defaults - no custom settings
+            logger.info("Using camera defaults - no custom settings applied")
+                    
         except Exception as e:
-            logger.error(f"Error applying camera settings: {e}")
+            logger.warning(f"Could not apply camera settings: {e}")
     
     def _check_disk_space(self, filename: str, min_space_mb: int = 50) -> bool:
         """Check if there's sufficient disk space for the image."""
@@ -193,12 +213,31 @@ class CameraManager:
             output_path = Path(filename)
             output_path.parent.mkdir(parents=True, exist_ok=True)
             
-            # Capture image
+            # Capture image directly to file for better color accuracy
             logger.info(f"Capturing image: {filename}")
-            image = self.camera.capture_array()
             
-            # Save image with error handling
-            return self._save_image(image, filename)
+            # Determine storage root and optional tag from config
+            storage_cfg = self.config.get('storage', {}) if hasattr(self.config, 'get') else {}
+            root_str = storage_cfg.get('root', './captures')
+            tag = storage_cfg.get('tag', None)
+            root_path = Path(root_str)
+
+            # Create timestamp and build path
+            ts = datetime.now()
+            base_dir = _build_capture_dir(root_path, ts, tag)
+            base_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Generate filename
+            filename = f"{ts.strftime('%H%M%S_%f')}.jpg"
+            out_path = base_dir / filename
+            
+            # Capture image directly to file - no color conversions
+            self.camera.capture_file(str(out_path))
+            
+            saved_path = out_path
+
+            logger.info(f"Image saved successfully: {saved_path}")
+            return True
             
         except PermissionError as e:
             logger.error(f"Permission error during capture: {e}")

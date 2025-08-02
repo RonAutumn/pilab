@@ -15,9 +15,9 @@ from pathlib import Path
 # Add src directory to Python path
 sys.path.insert(0, str(Path(__file__).parent / 'src'))
 
-from config_manager import ConfigManager
-from capture_utils import CameraManager
-from metrics import MetricsLogger, ImageQualityMetrics
+from src.config_manager import ConfigManager
+from src.capture_utils import CameraManager
+from src.metrics import MetricsLogger, ImageQualityMetrics
 
 
 def test_signal_handlers():
