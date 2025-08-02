@@ -204,3 +204,16 @@ node_modules/
 .taskmasterconfig
 tasks.json
 tasks/ 
+
+# SSH and sensitive configuration files
+ssh.config.md
+*.ssh.config.md
+*.ssh.config.mdc
+ssh_config.md
+ssh_config.mdc
+
+# Workflow and documentation files with sensitive info
+workflow.md
+workflow.mdc
+*.workflow.md
+*.workflow.mdc
