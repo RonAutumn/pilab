@@ -204,30 +204,37 @@ class PiLabTestScript:
         bucket_name = settings['bucket']
         
         try:
-            logger.info(f"☁️  Uploading to Supabase bucket '{bucket_name}': {filename}")
-            
-            # Read the image file
             with open(image_path, 'rb') as f:
                 file_data = f.read()
+
+            # Connect directly to storage API since we don't have Kong
+            storage_url = "http://192.168.1.162:54324"
             
-            # Upload to Supabase Storage using the underlying client
-            # Add explicit API key header
+            # Upload directly to storage API
+            import requests
+            
             headers = {
-                "apikey": self.supabase_client.key,
-                "Authorization": f"Bearer {self.supabase_client.key}"
+                "Authorization": f"Bearer {self.supabase_client.key}",
+                "Content-Type": "image/jpeg",
+                "Cache-Control": "3600"
             }
             
-            result = self.supabase_client.client.storage.from_(bucket_name).upload(
-                path=filename,
-                file=file_data,
-                file_options={"content-type": "image/jpeg"},
-                headers=headers
+            upload_url = f"{storage_url}/object/{bucket_name}/{filename}"
+            
+            response = requests.post(
+                upload_url,
+                data=file_data,
+                headers=headers,
+                timeout=30
             )
             
-            logger.info(f"✅ Upload successful: {filename}")
-            logger.info(f"📊 Upload result: {result}")
-            return True
-            
+            if response.status_code == 200:
+                logger.info(f"✅ Upload successful: {filename}")
+                return True
+            else:
+                logger.error(f"❌ Upload failed with status {response.status_code}: {response.text}")
+                return False
+                
         except Exception as e:
             logger.error(f"❌ Upload failed: {e}")
             return False
