@@ -204,14 +204,21 @@ class PiLabTestScript:
         bucket_name = settings['bucket']
         
         try:
-            # For now, we'll simulate the upload since we need to implement
-            # the actual upload functionality in the Supabase client
-            logger.info(f"☁️  Simulating upload to Supabase bucket '{bucket_name}': {filename}")
+            logger.info(f"☁️  Uploading to Supabase bucket '{bucket_name}': {filename}")
             
-            # TODO: Implement actual upload using self.supabase_client
-            # This would use the storage API to upload the file
+            # Read the image file
+            with open(image_path, 'rb') as f:
+                file_data = f.read()
+            
+            # Upload to Supabase Storage
+            result = self.supabase_client.storage.from_(bucket_name).upload(
+                path=filename,
+                file=file_data,
+                file_options={"content-type": "image/jpeg"}
+            )
             
             logger.info(f"✅ Upload successful: {filename}")
+            logger.info(f"📊 Upload result: {result}")
             return True
             
         except Exception as e:
