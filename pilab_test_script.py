@@ -210,11 +210,18 @@ class PiLabTestScript:
             with open(image_path, 'rb') as f:
                 file_data = f.read()
             
-            # Upload to Supabase Storage
-            result = self.supabase_client.storage.from_(bucket_name).upload(
+            # Upload to Supabase Storage using the underlying client
+            # Add explicit API key header
+            headers = {
+                "apikey": self.supabase_client.key,
+                "Authorization": f"Bearer {self.supabase_client.key}"
+            }
+            
+            result = self.supabase_client.client.storage.from_(bucket_name).upload(
                 path=filename,
                 file=file_data,
-                file_options={"content-type": "image/jpeg"}
+                file_options={"content-type": "image/jpeg"},
+                headers=headers
             )
             
             logger.info(f"✅ Upload successful: {filename}")
